@@ -1,0 +1,116 @@
+/* ==========================================================================
+   عيادات العوضي (Elawadi Clinics) - Print Stylesheet (روشتة PDF)
+   ========================================================================== */
+
+/* Hide everything except the prescription sheet when printing */
+@media print {
+    body * { visibility: hidden; }
+    #rxPrintArea, #rxPrintArea * { visibility: visible; }
+    #rxPrintArea {
+        display: block !important;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        padding: 1.5rem;
+    }
+
+    .rx-sheet {
+        border: 2px solid #0D8A64;
+        padding: 1.5rem;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: #000;
+        background: #fff;
+    }
+
+    .rx-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px solid #0D8A64;
+        padding-bottom: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .rx-header i { font-size: 2rem; color: #0D8A64; }
+
+    .rx-header > span:nth-child(2) {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #0D8A64;
+    }
+
+    .rx-badge {
+        background: #0D8A64;
+        color: #fff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .rx-date {
+        text-align: center;
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 1rem;
+    }
+
+    .rx-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .rx-info-grid span { color: #555; }
+
+    .rx-meds-title {
+        background: #e6f6f1;
+        color: #0D8A64;
+        font-weight: 800;
+        padding: 0.4rem 0.75rem;
+        margin-bottom: 0.5rem;
+        border-radius: 4px;
+    }
+
+    .rx-med-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 2fr;
+        gap: 0.5rem 1rem;
+        padding: 0.4rem 0;
+        border-bottom: 1px dashed #ccc;
+        font-size: 0.9rem;
+    }
+
+    .rx-med-row .m-name { font-weight: 700; }
+    .rx-med-row span.m-label { color: #888; font-size: 0.75rem; }
+
+    .rx-notes {
+        margin-top: 1rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8fafc;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+    }
+
+    .rx-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px dashed #ccc;
+    }
+
+    .rx-doctor { font-size: 1rem; font-weight: 700; }
+
+    .rx-signature img {
+        max-height: 90px;
+        max-width: 220px;
+    }
+}
+
+@media screen {
+    #rxPrintArea { display: none !important; }
+}

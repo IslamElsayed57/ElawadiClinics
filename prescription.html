@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عيادات العوضي - كتابة الروشتة</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/print.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-header">
+                <a href="dashboard.html" class="brand-logo">
+                    <div class="brand-logo-icon"><i class="fa-solid fa-hospital-user"></i></div>
+                    <span data-i18n="brandName">عيادات العوضي</span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span data-i18n="navDashboard">الرئيسية - طلبات الحجز</span>
+                    <span class="nav-badge" id="sidebarAppointmentsBadge">0</span>
+                </a>
+                <a href="intake.html" class="nav-item">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span data-i18n="navIntake">استقبال المرضى</span>
+                </a>
+                <a href="prescription.html" class="nav-item active">
+                    <i class="fa-solid fa-prescription"></i>
+                    <span data-i18n="navPrescription">كتابة الروشتة</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <i class="fa-solid fa-user-injured"></i>
+                    <span data-i18n="navPatients">بيانات المرضى</span>
+                </a>
+                <div class="nav-section-title">البيانات والأقسام</div>
+                <a href="staff-doctors.html" class="nav-item">
+                    <i class="fa-solid fa-user-doctor"></i>
+                    <span data-i18n="navStaffDoctors">الأطباء والعاملين</span>
+                </a>
+                <a href="categories.html" class="nav-item">
+                    <i class="fa-solid fa-tags"></i>
+                    <span data-i18n="navCategories">أقسام العيادات</span>
+                </a>
+                <a href="clinic-branches.html" class="nav-item">
+                    <i class="fa-solid fa-building"></i>
+                    <span data-i18n="navClinicBranches">فروع العيادات</span>
+                </a>
+                <div class="nav-section-title reports-nav" style="display:none">التقارير</div>
+                <a href="reports.html" class="nav-item reports-nav" style="display:none">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span data-i18n="navReports">التقارير</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-mini-card">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">...</div>
+                        <div class="user-role-badge" id="sidebarUserRole">...</div>
+                    </div>
+                    <button class="btn-logout" onclick="auth.signOut()" title="تسجيل الخروج">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <button class="btn-hamburger" id="btnHamburger"><i class="fa-solid fa-bars"></i></button>
+                    <h1 class="topbar-title" data-i18n="navPrescription">كتابة الروشتة</h1>
+                </div>
+                <div class="topbar-right">
+                    <div class="branch-indicator-badge" id="topbarBranchIndicator">
+                        <i class="fa-solid fa-hospital"></i> <span data-i18n="allBranches">جميع الفروع</span>
+                    </div>
+                    <button class="btn-icon" id="themeToggleBtn" onclick="toggleDashboardTheme()" title="الوضع الليلي"><i class="fa-solid fa-moon"></i></button>
+                    <button class="btn-icon" onclick="notifications.clearUnread()" title="الإشعارات"><i class="fa-solid fa-bell"></i><span class="notification-badge-dot" id="topbarNotificationDot"></span></button>
+                    <button id="langSwitcherBtn" class="lang-switcher-btn" onclick="i18n.toggleLanguage()"><i class="fa-solid fa-globe"></i> <span>English</span></button>
+                </div>
+            </header>
+
+            <main class="page-content">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fa-solid fa-prescription" style="color: var(--primary);"></i>
+                            <span data-i18n="rxTitle">كتابة الروشتة الطبية</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="generatePrescriptionPdf()">
+                            <i class="fa-solid fa-file-pdf"></i> <span data-i18n="generatePdf">إنشاء ملف PDF وطباعته</span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form id="rxForm" onsubmit="event.preventDefault(); generatePrescriptionPdf();">
+                            <div class="callout callout-info" id="rxInfoCallout">
+                                <i class="fa-solid fa-circle-info"></i>
+                                <span>بعد الضغط على "إنشاء ملف PDF" ستظهر معاينة الروشتة، ومنها يمكنك الطباعة أو الحفظ كملف PDF.</span>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="rxDate">تاريخ اليوم (تلقائي)</label>
+                                    <input type="date" id="rxDate" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="assignedDoctor">دكتور مربوط بالحساب</label>
+                                    <select id="rxDoctor" class="form-control"></select>
+                                </div>
+                            </div>
+
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="rxPatientName">اسم المريض *</label>
+                                    <input type="text" id="rxPatientName" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="rxPatientAge">العمر</label>
+                                    <input type="number" id="rxPatientAge" class="form-control" min="0" max="130">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="rxPatientPhone">رقم الجوال</label>
+                                    <input type="tel" id="rxPatientPhone" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top:0.5rem;">
+                                <label class="form-label" data-i18n="rxMedicines">الأدوية الموصوفة</label>
+                                <div id="medicinesList"></div>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="addMedicineRow()">
+                                    <i class="fa-solid fa-plus"></i> <span data-i18n="addMedicine">إضافة دواء</span>
+                                </button>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="rxNotes">ملاحظات إضافية (اختياري)</label>
+                                <textarea id="rxNotes" class="form-control" rows="2"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="rxDoctorName">اسم الدكتور</label>
+                                <input type="text" id="rxDoctorNameDisplay" class="form-control" readonly>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="upload-chip" id="sigChip" for="rxSigFile">
+                                    <i class="fa-solid fa-user-pen"></i>
+                                    <span data-i18n="rxDoctorSignature">رفع صورة توقيع / ختم الطبيب (اختياري)</span>
+                                </label>
+                                <input type="file" id="rxSigFile" accept="image/*" style="display:none;">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="btnRxGenerate">
+                                <i class="fa-solid fa-file-pdf"></i> <span data-i18n="generatePdf">إنشاء ملف PDF وطباعته</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Prescription PDF Preview (hidden, shown in print) -->
+    <div id="rxPrintArea" style="display:none;">
+        <div class="rx-sheet" id="rxSheet">
+            <div class="rx-header">
+                <i class="fa-solid fa-hospital-user"></i>
+                <span id="printBrand">عيادات العوضي</span>
+                <span class="rx-badge">وصفة طبية / Prescription</span>
+            </div>
+            <div id="printDate" class="rx-date"></div>
+            <div class="rx-info-grid">
+                <div><span>اسم المريض:</span> <strong id="printName"></strong></div>
+                <div><span>العمر:</span> <strong id="printAge"></strong></div>
+                <div><span>رقم الجوال:</span> <strong id="printPhone"></strong></div>
+            </div>
+            <div class="rx-meds-title">RX / الأدوية الموصوفة</div>
+            <div id="printMeds"></div>
+            <div id="printNotes" class="rx-notes"></div>
+            <div class="rx-footer">
+                <div class="rx-doctor">
+                    <span id="printDoctorName">د. </span>
+                </div>
+                <div id="printSignature" class="rx-signature"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/prescription.js"></script>
+</body>
+</html>
