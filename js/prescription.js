@@ -317,6 +317,7 @@ async function generatePrescriptionPdf() {
 
         // Auto-create new patient if no match found
         if (!linkedPatientId && name) {
+            const todayDate = today ? today.split("T")[0] : new Date().toISOString().split("T")[0];
             const { data: newPatient, error: insertErr } = await db.getClient()
                 .from("clinic_patients")
                 .insert({
@@ -327,7 +328,8 @@ async function generatePrescriptionPdf() {
                     gender: "male",
                     doctor_id: doctorId || null,
                     followup_days: followupDays ? parseInt(followupDays, 10) : null,
-                    is_new_visit: true
+                    is_new_visit: true,
+                    visit_date: todayDate
                 })
                 .select("id")
                 .maybeSingle();
