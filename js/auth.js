@@ -222,11 +222,12 @@ class AuthService {
 
         // Show branch in topbar indicator
         if (this.profile.branch_id) {
-            db.getClient().from("clinic_branches").select("name").eq("id", this.profile.branch_id).maybeSingle()
+            db.getClient().from("clinic_branches").select("name_ar, name_en").eq("id", this.profile.branch_id).maybeSingle()
                 .then(({ data }) => {
                     const branchEl = document.getElementById("topbarBranchIndicator");
                     if (branchEl && data) {
-                        branchEl.innerHTML = `<i class="fa-solid fa-hospital"></i> <span>${data.name}</span>`;
+                        const branchName = i18n.currentLang === "en" ? (data.name_en || data.name_ar) : data.name_ar;
+                        branchEl.innerHTML = `<i class="fa-solid fa-hospital"></i> <span>${branchName}</span>`;
                     }
                 });
         }

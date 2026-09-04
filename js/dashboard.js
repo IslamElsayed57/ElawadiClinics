@@ -83,8 +83,8 @@ async function loadRecentAppointments() {
         let query = db.getClient()
             .from("clinic_appointments")
             .select("id, patient_name, doctor_name, branch_name, preferred_day, status, created_at")
-            .order("created_at", { ascending: false })
-            .limit(10);
+            .order("created_at", { ascending: true })
+            .limit(20);
 
         // Doctor: only own appointments
         if (isDoctor && currentUserDoctorId) {
@@ -102,6 +102,14 @@ async function loadRecentAppointments() {
         }
 
         if (emptyState) emptyState.style.display = "none";
+
+        const sortOrder = { new: 0, confirmed: 1, completed: 2, cancelled: 3 };
+        data.sort((a, b) => {
+            const sa = sortOrder[(a.status || "").toLowerCase()] ?? 1;
+            const sb = sortOrder[(b.status || "").toLowerCase()] ?? 1;
+            if (sa !== sb) return sa - sb;
+            return new Date(a.created_at) - new Date(b.created_at);
+        });
 
         tableBody.innerHTML = data.map(a => {
             const isNew = (a.status || "").toLowerCase() === "new";
