@@ -47,7 +47,7 @@ function getBranchName(b) {
 function populateBranchSelect(selectedId) {
     const select = document.getElementById("userBranchInput");
     if (!select) return;
-    const placeholder = i18n.currentLang === "en" ? "No branch" : "بدون فرع";
+    const placeholder = i18n.t("branchNone");
     select.innerHTML = `<option value="">${placeholder}</option>` +
         branchesList.map(b => `<option value="${b.id}" ${b.id === selectedId ? "selected" : ""}>${getBranchName(b)}</option>`).join("");
 }
@@ -70,7 +70,7 @@ async function loadUsers() {
         usersList = data || [];
 
         const countBadge = document.getElementById("usersCountBadge");
-        if (countBadge) countBadge.textContent = `${usersList.length} مستخدم`;
+        if (countBadge) countBadge.textContent = `${usersList.length} ${i18n.t("usersCountLabel")}`;
 
         if (usersList.length === 0) {
             tbody.innerHTML = "";
@@ -84,14 +84,14 @@ async function loadUsers() {
             const roleLabel = i18n.currentLang === "en" ? role.en : role.ar;
             const isActive = u.is_active !== false;
             const statusBadge = isActive
-                ? `<span class="badge badge-active">نشط</span>`
-                : `<span class="badge badge-inactive">معطل</span>`;
+                ? `<span class="badge badge-active">${i18n.t("statusActive")}</span>`
+                : `<span class="badge badge-inactive">${i18n.t("statusInactive")}</span>`;
             const reportsBadge = u.can_view_reports
-                ? `<span class="badge badge-active">نعم</span>`
-                : `<span class="badge badge-inactive">لا</span>`;
+                ? `<span class="badge badge-active">${i18n.t("yes")}</span>`
+                : `<span class="badge badge-inactive">${i18n.t("no")}</span>`;
             const patientsBadge = u.can_view_patients !== false
-                ? `<span class="badge badge-active">نعم</span>`
-                : `<span class="badge badge-inactive">لا</span>`;
+                ? `<span class="badge badge-active">${i18n.t("yes")}</span>`
+                : `<span class="badge badge-inactive">${i18n.t("no")}</span>`;
             const created = u.created_at
                 ? new Date(u.created_at).toLocaleDateString("ar-EG")
                 : "-";
@@ -116,7 +116,7 @@ async function loadUsers() {
                     <td>${patientsBadge}</td>
                     <td><small style="color:var(--text-muted);">${created}</small></td>
                     <td>
-                        <button class="btn btn-secondary btn-sm" onclick="openEditUserModal('${u.id}')" title="تعديل">
+                        <button class="btn btn-secondary btn-sm" onclick="openEditUserModal('${u.id}')" title="${i18n.t("edit")}">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                     </td>
@@ -148,7 +148,7 @@ function openEditUserModal(userId) {
     document.getElementById("userReportsGroup").style.display = isAdmin ? "none" : "";
     document.getElementById("userPatientsGroup").style.display = isAdmin ? "none" : "";
 
-    document.getElementById("userModalTitle").textContent = `تعديل - ${u.full_name || u.id}`;
+    document.getElementById("userModalTitle").textContent = `${i18n.t("editUserTitle")} - ${u.full_name || u.id}`;
     document.getElementById("userModal").classList.add("active");
 }
 
@@ -169,7 +169,7 @@ async function handleUserFormSubmit(e) {
     const branchId = document.getElementById("userBranchInput").value || null;
 
     if (!fullName) {
-        utils.showToast("يرجى كتابة اسم المستخدم", "error");
+        utils.showToast(i18n.t("pleaseEnterUserName"), "error");
         return;
     }
 
@@ -206,11 +206,11 @@ async function deleteUser() {
 
     // Don't delete yourself
     if (id === auth.user?.id) {
-        utils.showToast("لا يمكنك حذف حسابك الخاص", "error");
+        utils.showToast(i18n.t("cannotDeleteSelf"), "error");
         return;
     }
 
-    utils.showConfirm("تأكيد الحذف", "هل أنت متأكد من حذف هذا المستخدم؟ سيتم تعطيل الحساب فقط (لا يُحذف من Authentication).", async () => {
+    utils.showConfirm(i18n.t("confirmDeleteTitle"), i18n.t("confirmDeleteUserMsg"), async () => {
         try {
             const { error } = await db.getClient()
                 .from("clinic_profiles")
@@ -219,7 +219,7 @@ async function deleteUser() {
 
             if (error) throw error;
 
-            utils.showToast("تم تعطيل الحساب بنجاح", "success");
+            utils.showToast(i18n.t("userDeactivated"), "success");
             closeUserModal();
             await loadUsers();
         } catch (err) {

@@ -58,10 +58,10 @@ async function loadDoctorsForFilter() {
         if (select) {
             if (isDoctor && currentUserDoctorId) {
                 const myDoc = doctorsOptions.find(d => d.id === currentUserDoctorId);
-                select.innerHTML = `<option value="${currentUserDoctorId}">${myDoc ? (i18n.currentLang === "en" ? (myDoc.name_en || myDoc.name_ar) : myDoc.name_ar) : "أنا"}</option>`;
+                select.innerHTML = `<option value="${currentUserDoctorId}">${myDoc ? (i18n.currentLang === "en" ? (myDoc.name_en || myDoc.name_ar) : myDoc.name_ar) : i18n.t("me")}</option>`;
             } else {
                 const currentVal = select.value;
-                select.innerHTML = `<option value="all">${i18n.currentLang === "en" ? "All doctors" : "كل الأطباء"}</option>` +
+                select.innerHTML = `<option value="all">${i18n.t("allDoctors")}</option>` +
                     doctorsOptions.map(d => `<option value="${d.id}">${i18n.currentLang === "en" ? (d.name_en || d.name_ar) : d.name_ar}</option>`).join("");
                 select.value = currentVal;
             }
@@ -191,20 +191,20 @@ async function loadPatients() {
                 : "-";
 
             const genderLabel = p.gender === "female"
-                ? (i18n.currentLang === "en" ? "Female" : "أنثى")
-                : (i18n.currentLang === "en" ? "Male" : "ذكر");
+                ? i18n.t("genderFemale")
+                : i18n.t("genderMale");
             const genderBadge = p.gender === "female"
                 ? `<span class="badge badge-female">${genderLabel}</span>`
                 : `<span class="badge badge-male">${genderLabel}</span>`;
 
             const visitBadge = p.is_new_visit === false
-                ? `<span class="badge badge-info">${i18n.currentLang === "en" ? "Follow-up" : "إعادة كشف"}</span>`
-                : `<span class="badge badge-active">${i18n.currentLang === "en" ? "New visit" : "كشف جديد"}</span>`;
+                ? `<span class="badge badge-info">${i18n.t("visitFollowup")}</span>`
+                : `<span class="badge badge-active">${i18n.t("visitNew")}</span>`;
 
             const visitDate = p.visit_date || "-";
             const hasImages = parseImageUrls(p.prescription_image).length > 0 || parseImageUrls(p.lab_image).length > 0;
             const imgIndicator = hasImages
-                ? `<button class="btn btn-secondary btn-sm" onclick="viewPatientImages('${p.id}')" title="الصور"><i class="fa-solid fa-image"></i></button>`
+                ? `<button class="btn btn-secondary btn-sm" onclick="viewPatientImages('${p.id}')" title="${i18n.t("images")}"><i class="fa-solid fa-image"></i></button>`
                 : `<small style="color:var(--text-muted);">-</small>`;
 
             // Rx cards: show all prescriptions with dates
@@ -226,7 +226,7 @@ async function loadPatients() {
                             <div style="text-align:left;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
                                 ${medCount > 0 ? `<span style="background:#0D8A64;color:#fff;border-radius:4px;padding:0 0.25rem;font-size:0.6rem;">${medCount} 💊</span>` : ""}
                                 ${testCount > 0 ? `<span style="background:#5C6BC0;color:#fff;border-radius:4px;padding:0 0.25rem;font-size:0.6rem;margin-left:2px;">${testCount} 🔬</span>` : ""}
-                                <button type="button" class="btn btn-icon btn-sm" style="width:22px;height:22px;padding:0;" onclick="event.stopPropagation(); previewPrescriptionPdf('${rx.id}')" title="${i18n.currentLang === "en" ? "View / Print" : "عرض / طباعة"}">
+                                <button type="button" class="btn btn-icon btn-sm" style="width:22px;height:22px;padding:0;" onclick="event.stopPropagation(); previewPrescriptionPdf('${rx.id}')" title="${i18n.t("viewPrint")}">
                                     <i class="fa-solid fa-eye" style="font-size:0.7rem;"></i>
                                 </button>
                             </div>
@@ -245,14 +245,14 @@ async function loadPatients() {
                 followupDate.setDate(followupDate.getDate() + p.followup_days);
                 const daysUntil = Math.ceil((followupDate - today) / (1000 * 60 * 60 * 24));
                 if (daysUntil > 0) {
-                    followupDisplay = `<span class="badge badge-info">${daysUntil} ${i18n.currentLang === "en" ? "days" : "يوم"}</span>`;
+                    followupDisplay = `<span class="badge badge-info">${daysUntil} ${i18n.t("daysUnit")}</span>`;
                 } else if (daysUntil === 0) {
-                    followupDisplay = `<span class="badge badge-warning">${i18n.currentLang === "en" ? "Today!" : "اليوم!"}</span>`;
+                    followupDisplay = `<span class="badge badge-warning">${i18n.t("todayExclamation")}</span>`;
                 } else {
-                    followupDisplay = `<span class="badge badge-danger">${i18n.currentLang === "en" ? "Overdue" : "متأخر"}</span>`;
+                    followupDisplay = `<span class="badge badge-danger">${i18n.t("overdue")}</span>`;
                 }
             } else if (p.followup_days && p.followup_days > 0) {
-                followupDisplay = `<span class="badge badge-info">${p.followup_days} ${i18n.currentLang === "en" ? "days" : "يوم"}</span>`;
+                followupDisplay = `<span class="badge badge-info">${p.followup_days} ${i18n.t("daysUnit")}</span>`;
             } else {
                 followupDisplay = `<small style="color:var(--text-muted);">-</small>`;
             }
@@ -271,7 +271,7 @@ async function loadPatients() {
                 <tr>
                     <td><strong>${p.full_name}</strong></td>
                     <td>${genderBadge}</td>
-                    <td><small style="color:var(--text-muted);">${p.age ? p.age + " " + (i18n.currentLang === "en" ? "y" : "سنة") : "-"}</small></td>
+                    <td><small style="color:var(--text-muted);">${p.age ? p.age + " " + i18n.t("yearsUnit") : "-"}</small></td>
                     <td><a href="tel:${p.phone}" style="color:var(--primary);">${p.phone || "-"}</a></td>
                     <td><span class="badge badge-info">${doctor}</span></td>
                     <td style="white-space:nowrap;">${visitBadge} ${imgIndicator}</td>
@@ -283,7 +283,7 @@ async function loadPatients() {
                         <div style="display:flex;gap:0.35rem;">
                             <button class="btn btn-secondary btn-sm" onclick="openPatientModal('${p.id}')" title="${i18n.t("viewDetails")}"><i class="fa-solid fa-eye"></i></button>
                             <button class="btn btn-primary btn-sm" onclick="openPrescriptionFor('${p.id}')" title="${i18n.t("navPrescription")}"><i class="fa-solid fa-prescription"></i></button>
-                            ${auth.isAdmin() ? `<button class="btn btn-secondary btn-sm" onclick="openEditPatientModal('${p.id}')" title="${i18n.currentLang === "en" ? "Edit" : "تعديل"}"><i class="fa-solid fa-pen"></i></button>` : ""}
+                            ${auth.isAdmin() || auth.profile?.clinic_role === "doctor" ? `<button class="btn btn-secondary btn-sm" onclick="openEditPatientModal('${p.id}')" title="${i18n.t("edit")}"><i class="fa-solid fa-pen"></i></button>` : ""}
                         </div>
                     </td>
                 </tr>
@@ -323,37 +323,37 @@ function openPatientModal(patientId) {
     const doctor = p.doctors
         ? (i18n.currentLang === "en" ? (p.doctors.name_en || p.doctors.name_ar) : p.doctors.name_ar)
         : "-";
-    const genderLabel = p.gender === "female" ? (i18n.currentLang === "en" ? "Female" : "أنثى") : (i18n.currentLang === "en" ? "Male" : "ذكر");
-    const visitLabel = p.is_new_visit === false ? (i18n.currentLang === "en" ? "Follow-up" : "إعادة كشف") : (i18n.currentLang === "en" ? "New visit" : "كشف جديد");
+    const genderLabel = p.gender === "female" ? i18n.t("genderFemale") : i18n.t("genderMale");
+    const visitLabel = p.is_new_visit === false ? i18n.t("visitFollowup") : i18n.t("visitNew");
     const created = p.created_at ? new Date(p.created_at).toLocaleDateString(i18n.currentLang === "en" ? "en-GB" : "ar-EG") : "-";
 
     const rxUrls = parseImageUrls(p.prescription_image);
     const labUrls = parseImageUrls(p.lab_image);
-    const rxLabel = i18n.currentLang === "en" ? "Prescription" : "الروشتة";
-    const labLabel = i18n.currentLang === "en" ? "Lab" : "التحاليل";
+    const rxLabel = i18n.t("prescriptionLabel");
+    const labLabel = i18n.t("labLabel");
 
     document.getElementById("patientModalTitle").textContent = `${i18n.t("navPatients")} - ${p.full_name}`;
     const visitsCount = p.phone ? patientsList.filter(x => x.phone === p.phone).length : (p.visits_count || 1);
     document.getElementById("patientModalBody").innerHTML = `
         <div class="detail-grid" style="margin-bottom:1rem;">
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Phone" : "الهاتف"}</strong><br>${p.phone || "-"}</p></div>
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Age" : "العمر"}</strong><br>${p.age ? p.age + " " + (i18n.currentLang === "en" ? "y" : "سنة") : "-"}</p></div>
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Weight" : "الوزن"}</strong><br>${p.weight ? p.weight + " " + (i18n.currentLang === "en" ? "kg" : "كجم") : "-"}</p></div>
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Gender" : "الجنس"}</strong><br>${genderLabel}</p></div>
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Visit type" : "نوع الكشف"}</strong><br>${visitLabel}</p></div>
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Doctor" : "الطبيب"}</strong><br>${doctor}</p></div>
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Visits" : "عدد الزيارات"}</strong><br>${visitsCount}</p></div>
-            <div class="detail-item"><p><strong>${i18n.currentLang === "en" ? "Follow-up" : "اعادة الكشف"}</strong><br>${p.followup_days ? p.followup_days + " " + (i18n.currentLang === "en" ? "days" : "يوم") : (i18n.currentLang === "en" ? "No follow-up" : "لا يوجد اعادة")}</p></div>
-            <div class="detail-item" style="grid-column:1/-1;"><p><strong>${i18n.currentLang === "en" ? "Complaint" : "الشكوى"}</strong><br>${p.complaint_details || "-"}</p></div>
-            <div class="detail-item" style="grid-column:1/-1;"><p><strong>${i18n.currentLang === "en" ? "Registered" : "تاريخ التسجيل"}</strong><br>${created}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("phoneLabel")}</strong><br>${p.phone || "-"}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("ageLabel")}</strong><br>${p.age ? p.age + " " + i18n.t("yearsUnit") : "-"}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("weightLabel")}</strong><br>${p.weight ? p.weight + " " + i18n.t("kgUnit") : "-"}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("genderLabelInput")}</strong><br>${genderLabel}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("visitTypeLabel")}</strong><br>${visitLabel}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("doctorLabel")}</strong><br>${doctor}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("visitsCountLabel")}</strong><br>${visitsCount}</p></div>
+            <div class="detail-item"><p><strong>${i18n.t("followupLabel")}</strong><br>${p.followup_days ? p.followup_days + " " + i18n.t("daysUnit") : i18n.t("noFollowupLabel")}</p></div>
+            <div class="detail-item" style="grid-column:1/-1;"><p><strong>${i18n.t("complaintLabel")}</strong><br>${p.complaint_details || "-"}</p></div>
+            <div class="detail-item" style="grid-column:1/-1;"><p><strong>${i18n.t("registeredLabel")}</strong><br>${created}</p></div>
         </div>
         <div style="display:flex;gap:1rem;flex-wrap:wrap;">
             <div style="flex:1;min-width:160px;">
-                <strong><small>${i18n.currentLang === "en" ? "Prescription images" : "صور الروشتة"} (${rxUrls.length})</small></strong>
+                <strong><small>${i18n.t("prescriptionImagesLabel")} (${rxUrls.length})</small></strong>
                 ${renderImageGrid(rxUrls, rxLabel)}
             </div>
             <div style="flex:1;min-width:160px;">
-                <strong><small>${i18n.currentLang === "en" ? "Lab images" : "صور التحاليل"} (${labUrls.length})</small></strong>
+                <strong><small>${i18n.t("labImagesLabel")} (${labUrls.length})</small></strong>
                 ${renderImageGrid(labUrls, labLabel)}
             </div>
         </div>
@@ -366,7 +366,7 @@ function closePatientModal() {
 }
 
 function openEditPatientModal(patientId) {
-    if (!auth.isAdmin()) return;
+    if (!auth.isAdmin() && auth.profile?.clinic_role !== "doctor") return;
     const p = patientsList.find(x => x.id === patientId);
     if (!p) return;
 
@@ -387,7 +387,7 @@ function closeEditPatientModal() {
 
 async function saveEditPatient(e) {
     e.preventDefault();
-    if (!auth.isAdmin()) return;
+    if (!auth.isAdmin() && auth.profile?.clinic_role !== "doctor") return;
     const id = document.getElementById("editPatientId").value;
     const data = {
         full_name: document.getElementById("editPatientName").value.trim(),
@@ -463,7 +463,7 @@ function viewPatientRx(patientId) {
     }
 
     const patient = patientsList.find(x => x.id === patientId);
-    document.getElementById("rxListModalTitle").textContent = `الروشتات - ${patient ? patient.full_name : ""}`;
+    document.getElementById("rxListModalTitle").textContent = `${i18n.t("allPrescriptions")} - ${patient ? patient.full_name : ""}`;
 
     let html = "";
     rxList.forEach(rx => {
@@ -476,19 +476,19 @@ function viewPatientRx(patientId) {
             <div style="border:1px solid var(--border-color);border-radius:var(--radius-md);padding:1rem;margin-bottom:0.75rem;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
                     <div>
-                        <strong style="color:var(--primary);">${i18n.currentLang === "en" ? "Date" : "التاريخ"}: ${date}</strong>
+                        <strong style="color:var(--primary);">${i18n.t("visitDate")}: ${date}</strong>
                         <span style="margin-inline-start:0.5rem;color:var(--text-muted);font-size:0.85rem;">${time}</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;">
                         <small style="color:var(--text-muted);">${rx.doctor_name || ""}</small>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="previewPrescriptionPdf('${rx.id}')" title="${i18n.currentLang === "en" ? "View / Print" : "عرض / طباعة"}">
-                            <i class="fa-solid fa-eye"></i> ${i18n.currentLang === "en" ? "View" : "عرض"}
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="previewPrescriptionPdf('${rx.id}')" title="${i18n.t("viewPrint")}">
+                            <i class="fa-solid fa-eye"></i> ${i18n.t("viewDetails")}
                         </button>
                     </div>
                 </div>
-                ${meds ? `<div style="margin-bottom:0.5rem;"><small style="color:var(--text-muted);">${i18n.currentLang === "en" ? "Medicines:" : "الأدوية:"}</small><ul style="margin:0.25rem 0 0 1.2rem;">${meds}</ul></div>` : ""}
-                ${tests ? `<div style="margin-bottom:0.5rem;"><small style="color:var(--text-muted);">${i18n.currentLang === "en" ? "Tests & Radiology:" : "التحاليل والاشعة:"}</small><ul style="margin:0.25rem 0 0 1.2rem;">${tests}</ul></div>` : ""}
-                ${rx.notes ? `<div><small style="color:var(--text-muted);">${i18n.currentLang === "en" ? "Notes:" : "ملاحظات:"}</small> ${rx.notes}</div>` : ""}
+                ${meds ? `<div style="margin-bottom:0.5rem;"><small style="color:var(--text-muted);">${i18n.t("medicinesLabel")}</small><ul style="margin:0.25rem 0 0 1.2rem;">${meds}</ul></div>` : ""}
+                ${tests ? `<div style="margin-bottom:0.5rem;"><small style="color:var(--text-muted);">${i18n.t("testsRadiologyLabel")}</small><ul style="margin:0.25rem 0 0 1.2rem;">${tests}</ul></div>` : ""}
+                ${rx.notes ? `<div><small style="color:var(--text-muted);">${i18n.t("notesLabel")}</small> ${rx.notes}</div>` : ""}
             </div>
         `;
     });

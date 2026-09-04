@@ -122,7 +122,7 @@ async function handleBranchFormSubmit(e) {
     const phone = document.getElementById("branchPhoneInput").value.trim();
 
     if (!nameAr) {
-        utils.showToast(i18n.currentLang === "ar" ? "يرجى كتابة اسم الفرع" : "Please provide branch name", "error");
+        utils.showToast(i18n.t("pleaseEnterBranchName"), "error");
         return;
     }
 
@@ -150,7 +150,7 @@ async function handleBranchFormSubmit(e) {
 
 async function toggleBranchActive(branchId, newStatus) {
     if (!auth.isAdmin()) return;
-    utils.showConfirm(i18n.t("confirmDeleteTitle"), `هل تريد ${newStatus ? "تنشيط" : "إلغاء تنشيط"} هذا الفرع؟`, async () => {
+    utils.showConfirm(i18n.t("confirmDeleteTitle"), i18n.t("confirmToggleBranch").replace("{{action}}", newStatus ? i18n.t("activate") : i18n.t("deactivate")), async () => {
         try {
             const { error } = await db.getClient().from("clinic_branches").update({ is_active: newStatus }).eq("id", branchId);
             if (error) throw error;

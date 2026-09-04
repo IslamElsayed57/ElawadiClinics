@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عيادات العوضي - إدارة المستخدمين</title>
+    <title data-i18n="titleUsers">عيادات العوضي - إدارة المستخدمين</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -37,7 +37,7 @@
                     <i class="fa-solid fa-user-injured"></i>
                     <span data-i18n="navPatients">بيانات المرضى</span>
                 </a>
-                <div class="nav-section-title">البيانات والأقسام</div>
+                <div class="nav-section-title" data-i18n="sectionData">البيانات والأقسام</div>
                 <a href="staff-doctors.html" class="nav-item">
                     <i class="fa-solid fa-user-doctor"></i>
                     <span data-i18n="navStaffDoctors">الأطباء والعاملين</span>
@@ -50,12 +50,12 @@
                     <i class="fa-solid fa-building"></i>
                     <span data-i18n="navClinicBranches">فروع العيادات</span>
                 </a>
-                <div class="nav-section-title admin-only-nav" style="display:none">الإدارة</div>
+                <div class="nav-section-title admin-only-nav" data-i18n="sectionAdmin" style="display:none">الإدارة</div>
                 <a href="users.html" class="nav-item admin-only-nav" style="display:none">
                     <i class="fa-solid fa-users-gear"></i>
-                    <span>إدارة المستخدمين</span>
+                            <span data-i18n="usersCardTitle">إدارة المستخدمين</span>
                 </a>
-                <div class="nav-section-title reports-nav" style="display:none">التقارير</div>
+                <div class="nav-section-title reports-nav" data-i18n="sectionReports" style="display:none">التقارير</div>
                 <a href="reports.html" class="nav-item reports-nav" style="display:none">
                     <i class="fa-solid fa-chart-line"></i>
                     <span data-i18n="navReports">التقارير</span>
@@ -68,7 +68,7 @@
                         <div class="user-name" id="sidebarUserName">...</div>
                         <div class="user-role-badge" id="sidebarUserRole">...</div>
                     </div>
-                    <button class="btn-logout" onclick="auth.signOut()" title="تسجيل الخروج">
+                    <button class="btn-logout" onclick="auth.signOut()" title="تسجيل الخروج" data-i18n-title="tooltipLogout">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </div>
@@ -79,14 +79,14 @@
             <header class="app-topbar">
                 <div class="topbar-left">
                     <button class="btn-hamburger" id="btnHamburger"><i class="fa-solid fa-bars"></i></button>
-                    <h1 class="topbar-title">إدارة المستخدمين</h1>
+                    <h1 class="topbar-title" data-i18n="usersTitle">إدارة المستخدمين</h1>
                 </div>
                 <div class="topbar-right">
                     <div class="branch-indicator-badge" id="topbarBranchIndicator">
                         <i class="fa-solid fa-hospital"></i> <span data-i18n="allBranches">جميع الفروع</span>
                     </div>
-                    <button class="btn-icon" id="themeToggleBtn" onclick="toggleDashboardTheme()" title="الوضع الليلي"><i class="fa-solid fa-moon"></i></button>
-                    <button class="btn-icon" onclick="notifications.clearUnread()" title="الإشعارات"><i class="fa-solid fa-bell"></i><span class="notification-badge-dot" id="topbarNotificationDot"></span></button>
+                    <button class="btn-icon" id="themeToggleBtn" onclick="toggleDashboardTheme()" title="الوضع الليلي" data-i18n-title="tooltipTheme"><i class="fa-solid fa-moon"></i></button>
+                    <button class="btn-icon" onclick="notifications.clearUnread()" title="الإشعارات" data-i18n-title="tooltipNotifications"><i class="fa-solid fa-bell"></i><span class="notification-badge-dot" id="topbarNotificationDot"></span></button>
                     <button id="langSwitcherBtn" class="lang-switcher-btn" onclick="i18n.toggleLanguage()"><i class="fa-solid fa-globe"></i> <span>English</span></button>
                 </div>
             </header>
@@ -96,12 +96,12 @@
                     <div class="card-header">
                         <div class="card-title">
                             <i class="fa-solid fa-users-gear" style="color: var(--primary);"></i>
-                            <span>إدارة المستخدمين</span>
+                    <span data-i18n="navUserManagement">إدارة المستخدمين</span>
                         </div>
                         <div style="display:flex;gap:0.5rem;align-items:center;">
                             <span class="badge badge-active" id="usersCountBadge">0</span>
                             <a href="https://supabase.com/dashboard/project/lbjeykexbkhyvuafndjr/auth/users" target="_blank" class="btn btn-primary btn-sm">
-                                <i class="fa-solid fa-plus"></i> إضافة مستخدم جديد
+                                <i class="fa-solid fa-plus"></i> <span data-i18n="addUser">إضافة مستخدم جديد</span>
                             </a>
                         </div>
                     </div>
@@ -110,14 +110,14 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>الاسم</th>
-                                        <th>الدور</th>
-                                        <th>الفرع</th>
-                                        <th>الحالة</th>
-                                        <th>التقارير</th>
-                                        <th>المرضى</th>
-                                        <th>تاريخ الإنشاء</th>
-                                        <th>إجراءات</th>
+                                        <th data-i18n="colName">الاسم</th>
+                                        <th data-i18n="colRole">الدور</th>
+                                        <th data-i18n="colBranch">الفرع</th>
+                                        <th data-i18n="colStatus">الحالة</th>
+                                        <th data-i18n="colReports">التقارير</th>
+                                        <th data-i18n="colPatients">المرضى</th>
+                                        <th data-i18n="colCreatedAt">تاريخ الإنشاء</th>
+                                        <th data-i18n="colActions">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody id="usersTableBody">
@@ -126,7 +126,7 @@
                         </div>
                         <div class="empty-state" id="emptyUsersState" style="display: none;">
                             <i class="fa-solid fa-users-gear"></i>
-                            <p>لا يوجد مستخدمين</p>
+                            <p data-i18n="emptyUsers">لا يوجد مستخدمين</p>
                         </div>
                     </div>
                 </div>
@@ -138,62 +138,62 @@
     <div class="modal-backdrop" id="userModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h4 class="card-title" id="userModalTitle">تعديل المستخدم</h4>
+                <h4 class="card-title" id="userModalTitle" data-i18n="editUserTitle">تعديل المستخدم</h4>
                 <button class="btn btn-icon btn-sm" onclick="closeUserModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="userForm" onsubmit="handleUserFormSubmit(event)">
                 <div class="modal-body">
                     <input type="hidden" id="userIdInput">
                     <div class="form-group">
-                        <label class="form-label">الاسم الكامل</label>
+                        <label class="form-label" data-i18n="fullNameLabel">الاسم الكامل</label>
                         <input type="text" id="userNameInput" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">الدور</label>
+                        <label class="form-label" data-i18n="colRole">الدور</label>
                         <select id="userRoleInput" class="form-control">
-                            <option value="staff">موظف (Staff)</option>
-                            <option value="doctor">طبيب (Doctor)</option>
-                            <option value="clinic_admin">مدير النظام (Admin)</option>
+                            <option value="staff" data-i18n="roleStaff">موظف (Staff)</option>
+                            <option value="doctor" data-i18n="roleDoctor">طبيب (Doctor)</option>
+                            <option value="clinic_admin" data-i18n="roleAdmin">مدير النظام (Admin)</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">الحالة</label>
+                        <label class="form-label" data-i18n="colStatus">الحالة</label>
                         <select id="userActiveInput" class="form-control">
-                            <option value="true">نشط</option>
-                            <option value="false">معطل</option>
+                            <option value="true" data-i18n="statusActive">نشط</option>
+                            <option value="false" data-i18n="statusInactive">معطل</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">ال Phone</label>
+                        <label class="form-label" data-i18n="phoneLabel">ال Phone</label>
                         <input type="text" id="userMobileInput" class="form-control">
                     </div>
                     <div class="form-group" id="userReportsGroup">
-                        <label class="form-label">صلاحية عرض التقارير</label>
+                        <label class="form-label" data-i18n="reportsPermission">صلاحية عرض التقارير</label>
                         <select id="userReportsInput" class="form-control">
-                            <option value="false">لا</option>
-                            <option value="true">نعم</option>
+                            <option value="false" data-i18n="no">لا</option>
+                            <option value="true" data-i18n="yes">نعم</option>
                         </select>
                     </div>
                     <div class="form-group" id="userPatientsGroup">
-                        <label class="form-label">صلاحية عرض المرضى</label>
+                        <label class="form-label" data-i18n="patientsPermission">صلاحية عرض المرضى</label>
                         <select id="userPatientsInput" class="form-control">
-                            <option value="true">نعم</option>
-                            <option value="false">لا</option>
+                            <option value="true" data-i18n="yes">نعم</option>
+                            <option value="false" data-i18n="no">لا</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">الفرع</label>
+                        <label class="form-label" data-i18n="colBranch">الفرع</label>
                         <select id="userBranchInput" class="form-control">
-                            <option value="">بدون فرع</option>
+                            <option value="" data-i18n="noBranch">بدون فرع</option>
                         </select>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-danger btn-sm" id="btnDeleteUser" onclick="deleteUser()" style="margin-inline-start:auto;">
-                        <i class="fa-solid fa-trash"></i> حذف
+                        <i class="fa-solid fa-trash"></i> <span data-i18n="deleteBtn">حذف</span>
                     </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeUserModal()">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">حفظ</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeUserModal()" data-i18n="cancel">إلغاء</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="save">حفظ</button>
                 </div>
             </form>
         </div>

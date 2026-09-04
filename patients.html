@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عيادات العوضي - بيانات المرضى</title>
+    <title data-i18n="titlePatients">عيادات العوضي - بيانات المرضى</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -38,7 +38,7 @@
                     <i class="fa-solid fa-user-injured"></i>
                     <span data-i18n="navPatients">بيانات المرضى</span>
                 </a>
-                <div class="nav-section-title">البيانات والأقسام</div>
+                <div class="nav-section-title" data-i18n="sectionData">البيانات والأقسام</div>
                 <a href="staff-doctors.html" class="nav-item">
                     <i class="fa-solid fa-user-doctor"></i>
                     <span data-i18n="navStaffDoctors">الأطباء والعاملين</span>
@@ -51,12 +51,12 @@
                     <i class="fa-solid fa-building"></i>
                     <span data-i18n="navClinicBranches">فروع العيادات</span>
                 </a>
-                <div class="nav-section-title admin-only-nav" style="display:none">الإدارة</div>
+                <div class="nav-section-title admin-only-nav" data-i18n="sectionAdmin" style="display:none">الإدارة</div>
                 <a href="users.html" class="nav-item admin-only-nav" style="display:none">
                     <i class="fa-solid fa-users-gear"></i>
-                    <span>إدارة المستخدمين</span>
+                    <span data-i18n="navUserManagement">إدارة المستخدمين</span>
                 </a>
-                <div class="nav-section-title reports-nav" style="display:none">التقارير</div>
+                <div class="nav-section-title reports-nav" data-i18n="sectionReports" style="display:none">التقارير</div>
                 <a href="reports.html" class="nav-item reports-nav" style="display:none">
                     <i class="fa-solid fa-chart-line"></i>
                     <span data-i18n="navReports">التقارير</span>
@@ -69,7 +69,7 @@
                         <div class="user-name" id="sidebarUserName">...</div>
                         <div class="user-role-badge" id="sidebarUserRole">...</div>
                     </div>
-                    <button class="btn-logout" onclick="auth.signOut()" title="تسجيل الخروج">
+                    <button class="btn-logout" onclick="auth.signOut()" title="تسجيل الخروج" data-i18n-title="tooltipLogout">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </div>
@@ -86,8 +86,8 @@
                     <div class="branch-indicator-badge" id="topbarBranchIndicator">
                         <i class="fa-solid fa-hospital"></i> <span data-i18n="allBranches">جميع الفروع</span>
                     </div>
-                    <button class="btn-icon" id="themeToggleBtn" onclick="toggleDashboardTheme()" title="الوضع الليلي"><i class="fa-solid fa-moon"></i></button>
-                    <button class="btn-icon" onclick="notifications.clearUnread()" title="الإشعارات"><i class="fa-solid fa-bell"></i><span class="notification-badge-dot" id="topbarNotificationDot"></span></button>
+                    <button class="btn-icon" id="themeToggleBtn" onclick="toggleDashboardTheme()" title="الوضع الليلي" data-i18n-title="tooltipTheme"><i class="fa-solid fa-moon"></i></button>
+                    <button class="btn-icon" onclick="notifications.clearUnread()" title="الإشعارات" data-i18n-title="tooltipNotifications"><i class="fa-solid fa-bell"></i><span class="notification-badge-dot" id="topbarNotificationDot"></span></button>
                     <button id="langSwitcherBtn" class="lang-switcher-btn" onclick="i18n.toggleLanguage()"><i class="fa-solid fa-globe"></i> <span>English</span></button>
                 </div>
             </header>
@@ -116,11 +116,11 @@
                             </div>
                             <div style="width:200px;">
                                 <select id="patientFollowupFilter" class="form-control">
-                                    <option value="all">كل المرضى</option>
-                                    <option value="has_followup">عليهم إعادة كشف</option>
-                                    <option value="no_followup">بدون إعادة كشف</option>
-                                    <option value="overdue">متأخر عن إعادة الكشف</option>
-                                    <option value="today">اعادة الكشف اليوم</option>
+                                    <option value="all" data-i18n="filterAll">كل المرضى</option>
+                                    <option value="has_followup" data-i18n="filterHasFollowup">عليهم إعادة كشف</option>
+                                    <option value="no_followup" data-i18n="filterNoFollowup">بدون إعادة كشف</option>
+                                    <option value="overdue" data-i18n="filterOverdue">متأخر عن إعادة الكشف</option>
+                                    <option value="today" data-i18n="filterToday">اعادة الكشف اليوم</option>
                                 </select>
                             </div>
                             <div style="width:220px;">
@@ -135,11 +135,11 @@
                                 <thead>
                                     <tr>
                                         <th data-i18n="navPatients">المريض</th>
-                                        <th>الجنس</th>
-                                        <th>العمر</th>
-                                        <th>الهاتف</th>
+                                        <th data-i18n="colGender">الجنس</th>
+                                        <th data-i18n="colAge">العمر</th>
+                                        <th data-i18n="colPhone">الهاتف</th>
                                         <th data-i18n="navStaffDoctors">الطبيب</th>
-                                        <th>نوع الكشف</th>
+                                        <th data-i18n="colVisitType">نوع الكشف</th>
                                         <th data-i18n="visitDate">التاريخ</th>
                                         <th data-i18n="allPrescriptions">الروشتات</th>
                                         <th data-i18n="rxDiagnosis">التشخيص</th>
@@ -166,7 +166,7 @@
     <div class="modal-backdrop" id="patientModal">
         <div class="modal-card modal-lg">
             <div class="modal-header">
-                <h4 class="card-title" id="patientModalTitle">ملف المريض</h4>
+                <h4 class="card-title" id="patientModalTitle" data-i18n="patientProfile">ملف المريض</h4>
                 <button class="btn btn-icon btn-sm" onclick="closePatientModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body" id="patientModalBody">
@@ -192,7 +192,7 @@
     <div class="modal-backdrop" id="editPatientModal">
         <div class="modal-card modal-lg">
             <div class="modal-header">
-                <h4 class="card-title">تعديل بيانات المريض</h4>
+                <h4 class="card-title" data-i18n="editPatientTitle">تعديل بيانات المريض</h4>
                 <button class="btn btn-icon btn-sm" onclick="closeEditPatientModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
@@ -200,37 +200,37 @@
                     <input type="hidden" id="editPatientId">
                     <div class="form-row-3">
                         <div class="form-group">
-                            <label class="form-label">اسم المريض</label>
+                            <label class="form-label" data-i18n="patientNameLabel">اسم المريض</label>
                             <input type="text" id="editPatientName" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">الهاتف</label>
+                            <label class="form-label" data-i18n="colPhone">الهاتف</label>
                             <input type="tel" id="editPatientPhone" class="form-control">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">العمر</label>
+                            <label class="form-label" data-i18n="colAge">العمر</label>
                             <input type="number" id="editPatientAge" class="form-control" min="0" max="130">
                         </div>
                     </div>
                     <div class="form-row-3">
                         <div class="form-group">
-                            <label class="form-label">الوزن (كجم)</label>
+                            <label class="form-label" data-i18n="patientWeightLabel">الوزن (كجم)</label>
                             <input type="number" id="editPatientWeight" class="form-control" min="0" max="500" step="0.1">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">الجنس</label>
+                            <label class="form-label" data-i18n="colGender">الجنس</label>
                             <select id="editPatientGender" class="form-control">
-                                <option value="male">ذكر</option>
-                                <option value="female">أنثى</option>
+                                <option value="male" data-i18n="genderMale">ذكر</option>
+                                <option value="female" data-i18n="genderFemale">أنثى</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">اعادة الكشف (أيام)</label>
+                            <label class="form-label" data-i18n="followupDaysLabel">اعادة الكشف (أيام)</label>
                             <input type="number" id="editPatientFollowup" class="form-control" min="0">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">الشكوى</label>
+                            <label class="form-label" data-i18n="complaintLabel">الشكوى</label>
                         <textarea id="editPatientComplaint" class="form-control" rows="2"></textarea>
                     </div>
                     <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">

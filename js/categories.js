@@ -126,7 +126,7 @@ async function handleCategoryFormSubmit(e) {
     const icon = document.getElementById("categoryIconInput").value.trim() || "fa-stethoscope";
 
     if (!nameAr) {
-        utils.showToast(i18n.currentLang === "ar" ? "يرجى كتابة اسم القسم" : "Please provide category name", "error");
+        utils.showToast(i18n.t("pleaseEnterCategoryName"), "error");
         return;
     }
     if (!slug) slug = (nameEn || nameAr).toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -155,7 +155,7 @@ async function handleCategoryFormSubmit(e) {
 
 async function toggleCategoryActive(categoryId, newStatus) {
     if (!auth.isAdmin()) return;
-    utils.showConfirm(i18n.t("confirmDeleteTitle"), `هل تريد ${newStatus ? "تنشيط" : "إلغاء تنشيط"} هذا القسم؟`, async () => {
+    utils.showConfirm(i18n.t("confirmDeleteTitle"), i18n.t("confirmToggleCategory").replace("{{action}}", newStatus ? i18n.t("activate") : i18n.t("deactivate")), async () => {
         try {
             const { error } = await db.getClient().from("clinic_categories").update({ is_active: newStatus }).eq("id", categoryId);
             if (error) throw error;

@@ -51,9 +51,9 @@ async function loadDoctorsForReport() {
             // If doctor, only show their own name
             if (isDoctor && currentUserDoctorId) {
                 const myDoc = reportDoctors.find(d => d.id === currentUserDoctorId);
-                select.innerHTML = `<option value="${currentUserDoctorId}">${myDoc ? (i18n.currentLang === "en" ? (myDoc.name_en || myDoc.name_ar) : myDoc.name_ar) : "أنا"}</option>`;
+                select.innerHTML = `<option value="${currentUserDoctorId}">${myDoc ? (i18n.currentLang === "en" ? (myDoc.name_en || myDoc.name_ar) : myDoc.name_ar) : i18n.t("me")}</option>`;
             } else {
-                select.innerHTML = `<option value="all">${i18n.currentLang === "en" ? "All doctors" : "كل الأطباء"}</option>` +
+                select.innerHTML = `<option value="all">${i18n.t("allDoctors")}</option>` +
                     reportDoctors.map(d => `<option value="${d.id}">${i18n.currentLang === "en" ? (d.name_en || d.name_ar) : d.name_ar}</option>`).join("");
             }
         }
@@ -162,11 +162,11 @@ async function loadReports() {
 
         summaryEl.innerHTML = `
             <div class="stat-card stat-purple">
-                <div class="stat-info"><h3>${i18n.currentLang === "en" ? "Prescriptions" : "الروشتات"}</h3><div class="stat-value">${totalRx}</div></div>
+                <div class="stat-info"><h3>${i18n.t("allPrescriptions")}</h3><div class="stat-value">${totalRx}</div></div>
                 <div class="stat-icon-wrap"><i class="fa-solid fa-prescription"></i></div>
             </div>
             <div class="stat-card stat-completed">
-                <div class="stat-info"><h3>${i18n.currentLang === "en" ? "Est. value" : "القيمة التقديرية"}</h3><div class="stat-value">${utils.formatCurrency(estimatedRevenue)}</div></div>
+                <div class="stat-info"><h3>${i18n.t("thEstimatedValue")}</h3><div class="stat-value">${utils.formatCurrency(estimatedRevenue)}</div></div>
                 <div class="stat-icon-wrap"><i class="fa-solid fa-money-bill-trend-up"></i></div>
             </div>
         `;
@@ -178,7 +178,7 @@ async function loadReports() {
         }
 
         if (doctorsToShow.length === 0) {
-            doctorsToShow = [{ id: null, name_ar: "غير محدد", name_en: "Unassigned" }];
+            doctorsToShow = [{ id: null, name_ar: i18n.t("unassigned"), name_en: i18n.t("unassigned") }];
         }
 
         const rows = [];

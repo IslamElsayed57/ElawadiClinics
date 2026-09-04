@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عيادات العوضي - الأطباء</title>
+    <title data-i18n="titleDoctors">عيادات العوضي - الأطباء</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
@@ -37,7 +37,7 @@
                     <i class="fa-solid fa-user-injured"></i>
                     <span data-i18n="navPatients">بيانات المرضى</span>
                 </a>
-                <div class="nav-section-title">البيانات والأقسام</div>
+                <div class="nav-section-title" data-i18n="sectionData">البيانات والأقسام</div>
                 <a href="staff-doctors.html" class="nav-item active">
                     <i class="fa-solid fa-user-doctor"></i>
                     <span data-i18n="navStaffDoctors">الأطباء والعاملين</span>
@@ -50,12 +50,12 @@
                     <i class="fa-solid fa-building"></i>
                     <span data-i18n="navClinicBranches">فروع العيادات</span>
                 </a>
-                <div class="nav-section-title admin-only-nav" style="display:none">الإدارة</div>
+                <div class="nav-section-title admin-only-nav" data-i18n="sectionAdmin" style="display:none">الإدارة</div>
                 <a href="users.html" class="nav-item admin-only-nav" style="display:none">
                     <i class="fa-solid fa-users-gear"></i>
-                    <span>إدارة المستخدمين</span>
+                    <span data-i18n="navUserManagement">إدارة المستخدمين</span>
                 </a>
-                <div class="nav-section-title reports-nav" style="display:none">التقارير</div>
+                <div class="nav-section-title reports-nav" data-i18n="sectionReports" style="display:none">التقارير</div>
                 <a href="reports.html" class="nav-item reports-nav" style="display:none">
                     <i class="fa-solid fa-chart-line"></i>
                     <span data-i18n="navReports">التقارير</span>
@@ -68,7 +68,7 @@
                         <div class="user-name" id="sidebarUserName">...</div>
                         <div class="user-role-badge" id="sidebarUserRole">...</div>
                     </div>
-                    <button class="btn-logout" onclick="auth.signOut()" title="تسجيل الخروج">
+                    <button class="btn-logout" onclick="auth.signOut()" title="تسجيل الخروج" data-i18n-title="tooltipLogout">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </div>
@@ -85,8 +85,8 @@
                     <div class="branch-indicator-badge" id="topbarBranchIndicator">
                         <i class="fa-solid fa-hospital"></i> <span data-i18n="allBranches">جميع الفروع</span>
                     </div>
-                    <button class="btn-icon" id="themeToggleBtn" onclick="toggleDashboardTheme()" title="الوضع الليلي"><i class="fa-solid fa-moon"></i></button>
-                    <button class="btn-icon" onclick="notifications.clearUnread()" title="الإشعارات"><i class="fa-solid fa-bell"></i><span class="notification-badge-dot" id="topbarNotificationDot"></span></button>
+                    <button class="btn-icon" id="themeToggleBtn" onclick="toggleDashboardTheme()" title="الوضع الليلي" data-i18n-title="tooltipTheme"><i class="fa-solid fa-moon"></i></button>
+                    <button class="btn-icon" onclick="notifications.clearUnread()" title="الإشعارات" data-i18n-title="tooltipNotifications"><i class="fa-solid fa-bell"></i><span class="notification-badge-dot" id="topbarNotificationDot"></span></button>
                     <button id="langSwitcherBtn" class="lang-switcher-btn" onclick="i18n.toggleLanguage()"><i class="fa-solid fa-globe"></i> <span>English</span></button>
                 </div>
             </header>
@@ -125,7 +125,7 @@
                                         <th data-i18n="doctorBranch">الفرع</th>
                                         <th data-i18n="doctorWorkingHours">مواعيد العمل</th>
                                         <th data-i18n="doctorNewFee">الكشف الجديد</th>
-                                        <th>الحالة</th>
+                                        <th data-i18n="colStatus">الحالة</th>
                                         <th data-i18n="appointmentActions">إجراءات</th>
                                     </tr>
                                 </thead>
@@ -149,7 +149,7 @@
     <div class="modal-backdrop" id="doctorModal">
         <div class="modal-card" style="max-width: 640px;">
             <div class="modal-header">
-                <h4 class="card-title" id="doctorModalTitle">إضافة طبيب</h4>
+                <h4 class="card-title" id="doctorModalTitle" data-i18n="addDoctor">إضافة طبيب</h4>
                 <button class="btn btn-icon btn-sm" onclick="closeDoctorModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="doctorForm" onsubmit="handleDoctorFormSubmit(event)">

@@ -253,7 +253,7 @@ async function handleDoctorFormSubmit(e) {
     const followFee = parseFloat(document.getElementById("doctorFollowupFeeInput").value) || 0;
 
     if (!nameAr) {
-        utils.showToast(i18n.currentLang === "ar" ? "يرجى كتابة اسم الطبيب" : "Please provide doctor name", "error");
+        utils.showToast(i18n.t("pleaseEnterDoctorName"), "error");
         return;
     }
 
@@ -265,10 +265,14 @@ async function handleDoctorFormSubmit(e) {
         if (day && start && end) hours.push({ day, start, end });
     });
 
+    const categorySelect = document.getElementById("doctorCategoryInput");
+    const categoryName = categorySelect?.options[categorySelect.selectedIndex]?.text || "General";
+
     const payload = {
         name_ar: nameAr,
         name_en: nameEn,
         bio: bio,
+        specialty: categoryName,
         category_id: categoryId,
         branch_id: branchId,
         working_hours: hours,
@@ -300,7 +304,7 @@ async function handleDoctorFormSubmit(e) {
 async function toggleDoctorActive(doctorId, newStatus) {
     if (!auth.isAdmin()) return;
     const actionText = newStatus ? i18n.t("activate") : i18n.t("deactivate");
-    utils.showConfirm(i18n.t("confirmDeleteTitle"), `هل تريد ${actionText} هذا الطبيب؟`, async () => {
+    utils.showConfirm(i18n.t("confirmDeleteTitle"), i18n.t("confirmToggleDoctor").replace("{{action}}", actionText), async () => {
         try {
             const { error } = await db.getClient().from("doctors").update({ is_active: newStatus }).eq("id", doctorId);
             if (error) throw error;
