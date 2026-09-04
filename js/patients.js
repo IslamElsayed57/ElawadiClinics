@@ -282,7 +282,7 @@ async function loadPatients() {
                     <td>
                         <div style="display:flex;gap:0.35rem;">
                             <button class="btn btn-secondary btn-sm" onclick="openPatientModal('${p.id}')" title="${i18n.t("viewDetails")}"><i class="fa-solid fa-eye"></i></button>
-                            <button class="btn btn-primary btn-sm" onclick="openPrescriptionFor('${p.id}')" title="${i18n.t("navPrescription")}"><i class="fa-solid fa-prescription"></i></button>
+                            ${auth.profile?.clinic_role !== "staff" ? `<button class="btn btn-primary btn-sm" onclick="openPrescriptionFor('${p.id}')" title="${i18n.t("navPrescription")}"><i class="fa-solid fa-prescription"></i></button>` : ""}
                             ${auth.isAdmin() || auth.profile?.clinic_role === "doctor" ? `<button class="btn btn-secondary btn-sm" onclick="openEditPatientModal('${p.id}')" title="${i18n.t("edit")}"><i class="fa-solid fa-pen"></i></button>` : ""}
                         </div>
                     </td>
