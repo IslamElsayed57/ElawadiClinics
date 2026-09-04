@@ -4,6 +4,9 @@
 
 let rxDoctors = [];
 let sigFileUrl = null;
+let currentUserDoctorId = null;
+let isDoctor = false;
+let allPatients = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
     utils.setupMobileSidebar();
@@ -11,10 +14,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isAuthed = await auth.init();
     if (!isAuthed) return;
 
+    // Staff cannot access prescription page
+    if (auth.profile && auth.profile.clinic_role === "staff") {
+        window.location.href = "dashboard.html";
+        return;
+    }
+
+    isDoctor = auth.profile?.clinic_role === "doctor";
+    currentUserDoctorId = auth.profile?.doctor_id || null;
+
     notifications.init();
     setTodayDate();
     await loadRxDoctors();
+    await loadPatientsForAutocomplete();
     addMedicineRow();
+    setupPatientAutocomplete();
+    prefillPatientFromStorage();
 
     // Signature upload chip
     const sigInput = document.getElementById("rxSigFile");
@@ -52,7 +67,7 @@ async function loadRxDoctors() {
     try {
         const { data, error } = await db.getClient()
             .from("doctors")
-            .select("id, name_ar, name_en")
+            .select("id, name_ar, name_en, new_visit_fee, followup_fee")
             .eq("is_active", true)
             .order("created_at", { ascending: true });
 
@@ -64,6 +79,13 @@ async function loadRxDoctors() {
             select.innerHTML = rxDoctors.map(d =>
                 `<option value="${d.id}">${i18n.currentLang === "en" ? (d.name_en || d.name_ar) : d.name_ar}</option>`
             ).join("");
+
+            // Doctor: lock to own name
+            if (isDoctor && currentUserDoctorId) {
+                select.value = currentUserDoctorId;
+                select.disabled = true;
+            }
+
             updateDoctorNameDisplay();
         }
     } catch (e) {
@@ -77,6 +99,100 @@ function updateDoctorNameDisplay() {
     if (!select || !display) return;
     const doc = rxDoctors.find(d => d.id === select.value);
     display.value = doc ? (i18n.currentLang === "en" ? (doc.name_en || doc.name_ar) : doc.name_ar) : "";
+}
+
+async function loadPatientsForAutocomplete() {
+    try {
+        let query = db.getClient().from("clinic_patients").select("id, full_name, phone, age, weight, doctor_id");
+        if (isDoctor && currentUserDoctorId) {
+            query = query.eq("doctor_id", currentUserDoctorId);
+        }
+        const { data } = await query;
+        allPatients = data || [];
+    } catch (e) {
+        console.error("Load patients for autocomplete error:", e);
+    }
+}
+
+function setupPatientAutocomplete() {
+    const input = document.getElementById("rxPatientName");
+    const suggestionsEl = document.getElementById("patientSuggestions");
+    if (!input || !suggestionsEl) return;
+
+    input.addEventListener("input", () => {
+        const val = input.value.trim().toLowerCase();
+        if (val.length < 1) {
+            suggestionsEl.classList.remove("active");
+            return;
+        }
+
+        const matches = allPatients.filter(p =>
+            (p.full_name || "").toLowerCase().includes(val) ||
+            (p.phone || "").includes(val)
+        ).slice(0, 8);
+
+        if (matches.length === 0) {
+            suggestionsEl.classList.remove("active");
+            return;
+        }
+
+        suggestionsEl.innerHTML = matches.map(p => `
+            <div class="patient-suggestion-item" data-id="${p.id}" data-name="${p.full_name}" data-phone="${p.phone || ""}" data-age="${p.age || ""}" data-weight="${p.weight || ""}">
+                <span class="suggestion-name">${p.full_name}</span>
+                <span class="suggestion-phone">${p.phone || ""}</span>
+            </div>
+        `).join("");
+        suggestionsEl.classList.add("active");
+
+        suggestionsEl.querySelectorAll(".patient-suggestion-item").forEach(item => {
+            item.addEventListener("click", () => {
+                input.value = item.dataset.name;
+                const phoneField = document.getElementById("rxPatientPhone");
+                const ageField = document.getElementById("rxPatientAge");
+                const weightField = document.getElementById("rxPatientWeight");
+                const linkedIdField = document.getElementById("rxLinkedPatientId");
+                if (phoneField && item.dataset.phone) phoneField.value = item.dataset.phone;
+                if (ageField && item.dataset.age) ageField.value = item.dataset.age;
+                if (weightField && item.dataset.weight) weightField.value = item.dataset.weight;
+                if (linkedIdField && item.dataset.id) linkedIdField.value = item.dataset.id;
+                suggestionsEl.classList.remove("active");
+            });
+        });
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest("#rxPatientName") && !e.target.closest("#patientSuggestions")) {
+            suggestionsEl.classList.remove("active");
+        }
+    });
+}
+
+function prefillPatientFromStorage() {
+    try {
+        const raw = localStorage.getItem("clinic_prefill_patient");
+        if (!raw) return;
+        const p = JSON.parse(raw);
+        localStorage.removeItem("clinic_prefill_patient");
+
+        const nameField = document.getElementById("rxPatientName");
+        const ageField = document.getElementById("rxPatientAge");
+        const phoneField = document.getElementById("rxPatientPhone");
+        const weightField = document.getElementById("rxPatientWeight");
+        const doctorField = document.getElementById("rxDoctor");
+        const linkedIdField = document.getElementById("rxLinkedPatientId");
+
+        if (linkedIdField && p.patient_id) linkedIdField.value = p.patient_id;
+        if (nameField && p.full_name) nameField.value = p.full_name;
+        if (ageField && p.age) ageField.value = p.age;
+        if (phoneField && p.phone) phoneField.value = p.phone;
+        if (weightField && p.weight) weightField.value = p.weight;
+        if (doctorField && p.doctor_id) {
+            doctorField.value = p.doctor_id;
+            updateDoctorNameDisplay();
+        }
+    } catch (e) {
+        console.error("Prefill patient error:", e);
+    }
 }
 
 // Bind doctor select change
@@ -95,6 +211,20 @@ function addMedicineRow() {
         <input type="text" class="med-name" placeholder="${i18n.currentLang === "ar" ? "اسم الدواء" : "Medicine name"}">
         <input type="text" class="med-dosage" placeholder="${i18n.currentLang === "ar" ? "الجرعة" : "Dosage"}">
         <input type="text" class="med-instructions" placeholder="${i18n.currentLang === "ar" ? "طريقة الاستخدام" : "Instructions"}">
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.med-item').remove()" title="حذف">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    `;
+    list.appendChild(row);
+}
+
+function addTestRow() {
+    const list = document.getElementById("testsList");
+    const row = document.createElement("div");
+    row.className = "med-item";
+    row.innerHTML = `
+        <input type="text" class="test-name" placeholder="${i18n.currentLang === "ar" ? "اسم التحليل / الاشعة" : "Test / Radiology name"}">
+        <input type="text" class="test-notes" placeholder="${i18n.currentLang === "ar" ? "ملاحظات" : "Notes"}" style="flex:2;">
         <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.med-item').remove()" title="حذف">
             <i class="fa-solid fa-trash"></i>
         </button>
@@ -126,15 +256,39 @@ async function generatePrescriptionPdf() {
         return;
     }
 
+    // Collect tests/radiology
+    const testRows = document.querySelectorAll("#testsList .med-item");
+    const tests = [];
+    testRows.forEach(r => {
+        const tName = r.querySelector(".test-name").value.trim();
+        const tNotes = r.querySelector(".test-notes").value.trim();
+        if (tName) {
+            tests.push({ name: tName, notes: tNotes });
+        }
+    });
+
     // Upload signature if present
     sigFileUrl = null;
     const sigInput = document.getElementById("rxSigFile");
     if (sigInput && sigInput.files && sigInput.files[0]) {
-        sigFileUrl = await db.uploadClinicFile(sigInput.files[0], "signatures");
+        const file = sigInput.files[0];
+        sigFileUrl = await db.uploadClinicFile(file, "signatures");
+        // Fallback: convert to base64 if upload failed
+        if (!sigFileUrl) {
+            sigFileUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(file);
+            });
+        }
     }
 
     const age = document.getElementById("rxPatientAge").value;
     const phone = document.getElementById("rxPatientPhone").value.trim();
+    const weight = document.getElementById("rxPatientWeight").value;
+    const followupDays = document.getElementById("rxFollowupDays").value;
+    const diagnosis = document.getElementById("rxDiagnosis").value.trim();
     const notes = document.getElementById("rxNotes").value.trim();
     const doctorName = document.getElementById("rxDoctorNameDisplay").value.trim() || "د. ";
     const doctorId = document.getElementById("rxDoctor")?.value || null;
@@ -142,15 +296,75 @@ async function generatePrescriptionPdf() {
 
     // Save to DB
     try {
+        // Find existing patient to link prescription
+        let linkedPatientId = document.getElementById("rxLinkedPatientId")?.value || null;
+        if (!linkedPatientId && phone) {
+            const { data: existingPatient } = await db.getClient()
+                .from("clinic_patients")
+                .select("id")
+                .eq("phone", phone)
+                .maybeSingle();
+            if (existingPatient) linkedPatientId = existingPatient.id;
+        }
+        if (!linkedPatientId && name) {
+            const { data: existingPatient } = await db.getClient()
+                .from("clinic_patients")
+                .select("id")
+                .eq("full_name", name)
+                .maybeSingle();
+            if (existingPatient) linkedPatientId = existingPatient.id;
+        }
+
+        // Auto-create new patient if no match found
+        if (!linkedPatientId && name) {
+            const { data: newPatient, error: insertErr } = await db.getClient()
+                .from("clinic_patients")
+                .insert({
+                    full_name: name,
+                    phone: phone || null,
+                    age: age ? parseInt(age, 10) : null,
+                    weight: weight ? parseFloat(weight) : null,
+                    gender: "male",
+                    doctor_id: doctorId || null,
+                    followup_days: followupDays ? parseInt(followupDays, 10) : null,
+                    is_new_visit: true
+                })
+                .select("id")
+                .maybeSingle();
+            if (insertErr) console.error("Failed to auto-create patient:", insertErr);
+            if (!insertErr && newPatient) linkedPatientId = newPatient.id;
+        }
+
+        // Update patient's followup_days and age if linked
+        if (linkedPatientId) {
+            const updateData = {};
+            if (followupDays) updateData.followup_days = parseInt(followupDays, 10);
+            if (age) updateData.age = parseInt(age, 10);
+            if (Object.keys(updateData).length > 0) {
+                await db.getClient()
+                    .from("clinic_patients")
+                    .update(updateData)
+                    .eq("id", linkedPatientId);
+            }
+        }
+
         await db.getClient().from("clinic_prescriptions").insert({
+            patient_id: linkedPatientId,
             patient_name: name,
             patient_age: age ? parseInt(age, 10) : null,
             patient_phone: phone,
+            patient_weight: weight ? parseFloat(weight) : null,
             doctor_name: doctorName,
             doctor_id: doctorId,
             doctor_signature_image: sigFileUrl,
             medicines: medicines,
-            notes: notes
+            tests: tests.length > 0 ? tests : null,
+            diagnosis: diagnosis,
+            notes: notes,
+            visit_fee: (() => {
+                const doc = rxDoctors.find(d => d.id === doctorId);
+                return doc ? (doc.new_visit_fee || 0) : 0;
+            })()
         });
     } catch (err) {
         console.warn("Could not persist prescription (continuing to preview):", err);
@@ -158,7 +372,8 @@ async function generatePrescriptionPdf() {
 
     // Build print preview
     document.getElementById("printName").textContent = name;
-    document.getElementById("printAge").textContent = age || "-";
+    document.getElementById("printAge").textContent = age ? age + " y" : "-";
+    document.getElementById("printWeight").textContent = weight ? weight + " kg" : "-";
     document.getElementById("printPhone").textContent = phone || "-";
     document.getElementById("printDate").textContent = today;
     document.getElementById("printDoctorName").textContent = doctorName;
@@ -166,28 +381,67 @@ async function generatePrescriptionPdf() {
     const medsHtml = medicines.map(m => `
         <div class="rx-med-row">
             <span class="m-name">${m.name || "-"}</span>
-            <span>${m.dosage ? `<span class="m-label">جرعة:</span> ${m.dosage}` : "-"}</span>
-            <span>${m.instructions ? `<span class="m-label">استخدام:</span> ${m.instructions}` : "-"}</span>
+            <span>${m.dosage ? `<span class="m-label">Dose:</span> ${m.dosage}` : "-"}</span>
+            <span>${m.instructions ? `<span class="m-label">Usage:</span> ${m.instructions}` : "-"}</span>
         </div>
     `).join("");
     document.getElementById("printMeds").innerHTML = medsHtml;
 
+    // Tests/Radiology
+    const testsTitle = document.getElementById("printTestsTitle");
+    const testsEl = document.getElementById("printTests");
+    if (tests.length > 0) {
+        testsTitle.style.display = "block";
+        testsEl.innerHTML = tests.map(t => `
+            <div class="rx-med-row">
+                <span class="m-name">${t.name}</span>
+                <span>${t.notes ? `<span class="m-label">Notes:</span> ${t.notes}` : ""}</span>
+            </div>
+        `).join("");
+    } else {
+        testsTitle.style.display = "none";
+        testsEl.innerHTML = "";
+    }
+
+    const diagnosisEl = document.getElementById("printDiagnosis");
+    if (diagnosis) {
+        diagnosisEl.textContent = `Diagnosis: ${diagnosis}`;
+        diagnosisEl.style.display = "block";
+    } else {
+        diagnosisEl.textContent = "";
+        diagnosisEl.style.display = "none";
+    }
+
     const notesEl = document.getElementById("printNotes");
     if (notes) {
-        notesEl.textContent = `ملاحظات: ${notes}`;
+        notesEl.textContent = `Notes: ${notes}`;
         notesEl.style.display = "block";
     } else {
         notesEl.textContent = "";
         notesEl.style.display = "none";
     }
 
+    const followupEl = document.getElementById("printFollowup");
+    if (followupDays && parseInt(followupDays, 10) > 0) {
+        followupEl.textContent = `Follow-up Visit: ${followupDays} days`;
+        followupEl.style.display = "block";
+    } else {
+        followupEl.textContent = "";
+        followupEl.style.display = "none";
+    }
+
     const sigEl = document.getElementById("printSignature");
     if (sigFileUrl) {
-        sigEl.innerHTML = `<img src="${sigFileUrl}" alt="signature">`;
+        let fullSigUrl = sigFileUrl;
+        if (!sigFileUrl.startsWith("http")) {
+            fullSigUrl = CONFIG.SUPABASE_URL + "/storage/v1/object/public/" + CONFIG.STORAGE_BUCKET + "/" + sigFileUrl;
+        }
+        sigEl.innerHTML = `<img src="${fullSigUrl}" alt="signature">`;
     } else {
         sigEl.innerHTML = "";
     }
 
     // Trigger browser print dialog (user can Save as PDF)
-    window.print();
+    // For Chrome: uncheck "Headers and footers" in print settings to hide URL
+    const printWindow = window.print();
 }

@@ -202,16 +202,55 @@ class AuthService {
         document.querySelectorAll(".reports-nav").forEach(el => {
             el.style.display = canSeeReports ? "" : "none";
         });
+
+        // Hide prescription nav for staff (cannot write prescriptions)
+        if (this.profile.clinic_role === "staff") {
+            document.querySelectorAll('a[href="prescription.html"]').forEach(el => {
+                el.style.display = "none";
+            });
+        }
+
+        // Hide intake nav for doctors (they don't handle intake)
+        if (this.profile.clinic_role === "doctor") {
+            document.querySelectorAll('a[href="intake.html"]').forEach(el => {
+                el.style.display = "none";
+            });
+            document.querySelectorAll(".doctor-hide").forEach(el => {
+                el.style.display = "none";
+            });
+        }
+
+        // Show branch in topbar indicator
+        if (this.profile.branch_id) {
+            db.getClient().from("clinic_branches").select("name").eq("id", this.profile.branch_id).maybeSingle()
+                .then(({ data }) => {
+                    const branchEl = document.getElementById("topbarBranchIndicator");
+                    if (branchEl && data) {
+                        branchEl.innerHTML = `<i class="fa-solid fa-hospital"></i> <span>${data.name}</span>`;
+                    }
+                });
+        }
     }
 
     enforceRolePermissions() {
         const currentPage = window.location.pathname.split("/").pop();
+
+        // Dashboard page: admin and staff only, not doctors
+        if (currentPage === "dashboard.html" && this.profile?.clinic_role === "doctor") {
+            window.location.href = "prescription.html";
+            return;
+        }
 
         // Reports page: admin always; staff/doctor only if admin granted can_view_reports
         if (currentPage === "reports.html" && !this.isAdmin()) {
             if (!this.profile || !this.profile.can_view_reports) {
                 window.location.href = "dashboard.html";
             }
+        }
+
+        // Intake page: doctors cannot access
+        if (currentPage === "intake.html" && this.profile?.clinic_role === "doctor") {
+            window.location.href = "dashboard.html";
         }
     }
 }

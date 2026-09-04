@@ -2,24 +2,68 @@
    عيادات العوضي (Elawadi Clinics) - Print Stylesheet (روشتة PDF)
    ========================================================================== */
 
-/* Hide everything except the prescription sheet when printing */
+@page {
+    margin: 0;
+    size: A4;
+}
+
 @media print {
-    body * { visibility: hidden; }
-    #rxPrintArea, #rxPrintArea * { visibility: visible; }
+    /* Kill all body content space */
+    html {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        background: none !important;
+    }
+
+    /* Hide everything */
+    body > *:not(#rxPrintArea):not(#rxPrintArea *) {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
     #rxPrintArea {
         display: block !important;
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        padding: 1.5rem;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 99999 !important;
+        overflow: hidden !important;
+        background: #fff !important;
     }
 
     .rx-sheet {
         border: 2px solid #0D8A64;
-        padding: 1.5rem;
+        padding: 1.2rem 1.5rem;
         font-family: 'Segoe UI', Tahoma, sans-serif;
         color: #000;
         background: #fff;
+        width: calc(100% - 3rem) !important;
+        height: calc(100vh - 3rem) !important;
+        margin: 1.5rem !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
 
     .rx-header {
@@ -27,39 +71,39 @@
         align-items: center;
         justify-content: space-between;
         border-bottom: 2px solid #0D8A64;
-        padding-bottom: 0.75rem;
-        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.5rem;
     }
 
-    .rx-header i { font-size: 2rem; color: #0D8A64; }
+    .rx-header i { font-size: 1.5rem; color: #0D8A64; }
 
     .rx-header > span:nth-child(2) {
-        font-size: 1.6rem;
+        font-size: 1.4rem;
         font-weight: 800;
         color: #0D8A64;
     }
 
     .rx-badge {
-        background: #0D8A64;
-        color: #fff;
-        padding: 0.25rem 0.75rem;
-        border-radius: 4px;
-        font-size: 0.8rem;
+        color: #999;
+        font-size: 0.85rem;
+        font-weight: 400;
+        background: none;
+        padding: 0;
     }
 
     .rx-date {
         text-align: center;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: #333;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
 
     .rx-info-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem 1rem;
-        margin-bottom: 1rem;
-        font-size: 0.95rem;
+        gap: 0.3rem 1rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
     }
 
     .rx-info-grid span { color: #555; }
@@ -68,29 +112,30 @@
         background: #e6f6f1;
         color: #0D8A64;
         font-weight: 800;
-        padding: 0.4rem 0.75rem;
-        margin-bottom: 0.5rem;
+        padding: 0.3rem 0.75rem;
+        margin-bottom: 0.3rem;
         border-radius: 4px;
+        font-size: 0.85rem;
     }
 
     .rx-med-row {
         display: grid;
         grid-template-columns: 2fr 1fr 2fr;
-        gap: 0.5rem 1rem;
-        padding: 0.4rem 0;
+        gap: 0.3rem 1rem;
+        padding: 0.25rem 0;
         border-bottom: 1px dashed #ccc;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
 
     .rx-med-row .m-name { font-weight: 700; }
-    .rx-med-row span.m-label { color: #888; font-size: 0.75rem; }
+    .rx-med-row span.m-label { color: #888; font-size: 0.7rem; }
 
     .rx-notes {
-        margin-top: 1rem;
-        padding: 0.5rem 0.75rem;
+        margin-top: 0.5rem;
+        padding: 0.3rem 0.75rem;
         background: #f8fafc;
         border-radius: 4px;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         white-space: pre-wrap;
     }
 
@@ -98,16 +143,16 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
-        margin-top: 2rem;
-        padding-top: 1rem;
+        margin-top: 1rem;
+        padding-top: 0.5rem;
         border-top: 1px dashed #ccc;
     }
 
-    .rx-doctor { font-size: 1rem; font-weight: 700; }
+    .rx-doctor { font-size: 0.85rem; font-weight: 700; }
 
     .rx-signature img {
-        max-height: 90px;
-        max-width: 220px;
+        max-height: 70px;
+        max-width: 180px;
     }
 }
 

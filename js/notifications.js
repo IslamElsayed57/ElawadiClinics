@@ -3,7 +3,7 @@
 // ==========================================================================
 
 const PENDING_APPOINTMENT_KEY = "elawadi_clinic_pending_appointments";
-const ALERT_INTERVAL_MS = 6000; // ring every 6 seconds while appointments are pending
+const ALERT_INTERVAL_MS = 5000; // ring every 5 seconds while appointments are pending
 
 class NotificationManager {
     constructor() {

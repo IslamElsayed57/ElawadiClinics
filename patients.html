@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="css/print.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -20,7 +21,7 @@
                 </a>
             </div>
             <nav class="sidebar-nav">
-                <a href="dashboard.html" class="nav-item">
+                <a href="dashboard.html" class="nav-item doctor-hide">
                     <i class="fa-solid fa-chart-pie"></i>
                     <span data-i18n="navDashboard">الرئيسية - طلبات الحجز</span>
                     <span class="nav-badge" id="sidebarAppointmentsBadge">0</span>
@@ -49,6 +50,11 @@
                 <a href="clinic-branches.html" class="nav-item">
                     <i class="fa-solid fa-building"></i>
                     <span data-i18n="navClinicBranches">فروع العيادات</span>
+                </a>
+                <div class="nav-section-title admin-only-nav" style="display:none">الإدارة</div>
+                <a href="users.html" class="nav-item admin-only-nav" style="display:none">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>إدارة المستخدمين</span>
                 </a>
                 <div class="nav-section-title reports-nav" style="display:none">التقارير</div>
                 <a href="reports.html" class="nav-item reports-nav" style="display:none">
@@ -101,11 +107,20 @@
                                 <i class="fa-solid fa-magnifying-glass"></i>
                                 <input type="text" id="patientSearch" class="form-control" placeholder="بحث بالاسم أو الهاتف...">
                             </div>
+                            <div style="width:180px;">
+                                <input type="date" id="patientDateFilter" class="form-control" title="فلتر بالتاريخ">
+                            </div>
+                            <div class="search-input-group" style="width:180px;">
+                                <i class="fa-solid fa-stethoscope"></i>
+                                <input type="text" id="patientDiagnosisFilter" class="form-control" placeholder="بحث بالتشخيص...">
+                            </div>
                             <div style="width:200px;">
-                                <select id="patientGenderFilter" class="form-control">
-                                    <option value="all">الكل</option>
-                                    <option value="male">ذكر</option>
-                                    <option value="female">أنثى</option>
+                                <select id="patientFollowupFilter" class="form-control">
+                                    <option value="all">كل المرضى</option>
+                                    <option value="has_followup">عليهم إعادة كشف</option>
+                                    <option value="no_followup">بدون إعادة كشف</option>
+                                    <option value="overdue">متأخر عن إعادة الكشف</option>
+                                    <option value="today">اعادة الكشف اليوم</option>
                                 </select>
                             </div>
                             <div style="width:220px;">
@@ -120,11 +135,15 @@
                                 <thead>
                                     <tr>
                                         <th data-i18n="navPatients">المريض</th>
-                                        <th>الجنس / العمر</th>
+                                        <th>الجنس</th>
+                                        <th>العمر</th>
                                         <th>الهاتف</th>
                                         <th data-i18n="navStaffDoctors">الطبيب</th>
-                                        <th data-i18n="navPrescription">الروشتة</th>
-                                        <th data-i18n="navDashboard">الحالة</th>
+                                        <th>نوع الكشف</th>
+                                        <th data-i18n="visitDate">التاريخ</th>
+                                        <th data-i18n="allPrescriptions">الروشتات</th>
+                                        <th data-i18n="rxDiagnosis">التشخيص</th>
+                                        <th data-i18n="followupDays">اعادة الكشف</th>
                                         <th data-i18n="appointmentActions">إجراءات</th>
                                     </tr>
                                 </thead>
@@ -165,6 +184,94 @@
             </div>
             <div class="image-viewer-body">
                 <img id="imageViewerImg" src="" alt="صورة">
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Patient Modal -->
+    <div class="modal-backdrop" id="editPatientModal">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h4 class="card-title">تعديل بيانات المريض</h4>
+                <button class="btn btn-icon btn-sm" onclick="closeEditPatientModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPatientForm" onsubmit="saveEditPatient(event)">
+                    <input type="hidden" id="editPatientId">
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label class="form-label">اسم المريض</label>
+                            <input type="text" id="editPatientName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">الهاتف</label>
+                            <input type="tel" id="editPatientPhone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">العمر</label>
+                            <input type="number" id="editPatientAge" class="form-control" min="0" max="130">
+                        </div>
+                    </div>
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label class="form-label">الوزن (كجم)</label>
+                            <input type="number" id="editPatientWeight" class="form-control" min="0" max="500" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">الجنس</label>
+                            <select id="editPatientGender" class="form-control">
+                                <option value="male">ذكر</option>
+                                <option value="female">أنثى</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">اعادة الكشف (أيام)</label>
+                            <input type="number" id="editPatientFollowup" class="form-control" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">الشكوى</label>
+                        <textarea id="editPatientComplaint" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditPatientModal()">إلغاء</button>
+                        <button type="submit" class="btn btn-primary">حفظ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prescription PDF Preview (hidden, shown in print) — re-renders any
+         past prescription from clinic_prescriptions exactly like the
+         original printout, so patients.js can reprint/save it as PDF.
+         Same structure/IDs as prescription.html's #rxPrintArea. -->
+    <div id="rxPrintArea" style="display:none;">
+        <div class="rx-sheet" id="rxSheet">
+            <div class="rx-header">
+                <i class="fa-solid fa-hospital-user"></i>
+                <span id="printBrand">عيادات العوضي | Elawadi Clinics</span>
+                <span class="rx-badge">Prescription</span>
+            </div>
+            <div id="printDate" class="rx-date"></div>
+            <div class="rx-info-grid">
+                <div><span>Patient Name:</span> <strong id="printName"></strong></div>
+                <div><span>Age:</span> <strong id="printAge"></strong></div>
+                <div><span>Weight:</span> <strong id="printWeight"></strong></div>
+                <div><span>Mobile:</span> <strong id="printPhone"></strong></div>
+            </div>
+            <div id="printDiagnosis" class="rx-notes" style="display:none;"></div>
+            <div class="rx-meds-title">Prescribed Medicines</div>
+            <div id="printMeds"></div>
+            <div class="rx-meds-title" id="printTestsTitle" style="display:none;">Required Tests & Radiology</div>
+            <div id="printTests"></div>
+            <div id="printNotes" class="rx-notes"></div>
+            <div id="printFollowup" class="rx-notes" style="display:none;"></div>
+            <div class="rx-footer">
+                <div class="rx-doctor">
+                    <span id="printDoctorName">Dr. </span>
+                </div>
+                <div id="printSignature" class="rx-signature"></div>
             </div>
         </div>
     </div>

@@ -21,7 +21,7 @@
                 </a>
             </div>
             <nav class="sidebar-nav">
-                <a href="dashboard.html" class="nav-item">
+                <a href="dashboard.html" class="nav-item doctor-hide">
                     <i class="fa-solid fa-chart-pie"></i>
                     <span data-i18n="navDashboard">الرئيسية - طلبات الحجز</span>
                     <span class="nav-badge" id="sidebarAppointmentsBadge">0</span>
@@ -50,6 +50,11 @@
                 <a href="clinic-branches.html" class="nav-item">
                     <i class="fa-solid fa-building"></i>
                     <span data-i18n="navClinicBranches">فروع العيادات</span>
+                </a>
+                <div class="nav-section-title admin-only-nav" style="display:none">الإدارة</div>
+                <a href="users.html" class="nav-item admin-only-nav" style="display:none">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>إدارة المستخدمين</span>
                 </a>
                 <div class="nav-section-title reports-nav" style="display:none">التقارير</div>
                 <a href="reports.html" class="nav-item reports-nav" style="display:none">
@@ -117,9 +122,11 @@
                             </div>
 
                             <div class="form-row-3">
-                                <div class="form-group">
+                                <div class="form-group" style="position:relative;">
                                     <label class="form-label" data-i18n="rxPatientName">اسم المريض *</label>
-                                    <input type="text" id="rxPatientName" class="form-control" required>
+                                    <input type="hidden" id="rxLinkedPatientId">
+                                    <input type="text" id="rxPatientName" class="form-control" required autocomplete="off">
+                                    <div id="patientSuggestions" class="patient-suggestions"></div>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label" data-i18n="rxPatientAge">العمر</label>
@@ -129,6 +136,15 @@
                                     <label class="form-label" data-i18n="rxPatientPhone">رقم الجوال</label>
                                     <input type="tel" id="rxPatientPhone" class="form-control">
                                 </div>
+                                <div class="form-group">
+                                    <label class="form-label" data-i18n="rxPatientWeight">الوزن (كجم)</label>
+                                    <input type="number" id="rxPatientWeight" class="form-control" min="0" max="500" step="0.1">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" data-i18n="rxDiagnosis">التشخيص</label>
+                                <textarea id="rxDiagnosis" class="form-control" rows="2" placeholder="اكتب التشخيص هنا..."></textarea>
                             </div>
 
                             <div class="form-group" style="margin-top:0.5rem;">
@@ -137,6 +153,19 @@
                                 <button type="button" class="btn btn-outline btn-sm" onclick="addMedicineRow()">
                                     <i class="fa-solid fa-plus"></i> <span data-i18n="addMedicine">إضافة دواء</span>
                                 </button>
+                            </div>
+
+                            <div class="form-group" style="margin-top:0.5rem;">
+                                <label class="form-label" data-i18n="rxTests">التحاليل والاشعة المطلوب عملها</label>
+                                <div id="testsList"></div>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="addTestRow()">
+                                    <i class="fa-solid fa-plus"></i> <span data-i18n="addTest">إضافة تحليل / اشعة</span>
+                                </button>
+                            </div>
+
+                            <div class="form-group" style="max-width:300px;">
+                                <label class="form-label" data-i18n="followupDays">اعادة الكشف بعد (أيام)</label>
+                                <input type="number" id="rxFollowupDays" class="form-control" min="0" max="365" placeholder="0 = لا يوجد اعادة">
                             </div>
 
                             <div class="form-group">
@@ -172,21 +201,26 @@
         <div class="rx-sheet" id="rxSheet">
             <div class="rx-header">
                 <i class="fa-solid fa-hospital-user"></i>
-                <span id="printBrand">عيادات العوضي</span>
-                <span class="rx-badge">وصفة طبية / Prescription</span>
+                <span id="printBrand">عيادات العوضي | Elawadi Clinics</span>
+                <span class="rx-badge">Prescription</span>
             </div>
             <div id="printDate" class="rx-date"></div>
             <div class="rx-info-grid">
-                <div><span>اسم المريض:</span> <strong id="printName"></strong></div>
-                <div><span>العمر:</span> <strong id="printAge"></strong></div>
-                <div><span>رقم الجوال:</span> <strong id="printPhone"></strong></div>
+                <div><span>Patient Name:</span> <strong id="printName"></strong></div>
+                <div><span>Age:</span> <strong id="printAge"></strong></div>
+                <div><span>Weight:</span> <strong id="printWeight"></strong></div>
+                <div><span>Mobile:</span> <strong id="printPhone"></strong></div>
             </div>
-            <div class="rx-meds-title">RX / الأدوية الموصوفة</div>
+            <div id="printDiagnosis" class="rx-notes" style="display:none;"></div>
+            <div class="rx-meds-title">Prescribed Medicines</div>
             <div id="printMeds"></div>
+            <div class="rx-meds-title" id="printTestsTitle" style="display:none;">Required Tests & Radiology</div>
+            <div id="printTests"></div>
             <div id="printNotes" class="rx-notes"></div>
+            <div id="printFollowup" class="rx-notes" style="display:none;"></div>
             <div class="rx-footer">
                 <div class="rx-doctor">
-                    <span id="printDoctorName">د. </span>
+                    <span id="printDoctorName">Dr. </span>
                 </div>
                 <div id="printSignature" class="rx-signature"></div>
             </div>

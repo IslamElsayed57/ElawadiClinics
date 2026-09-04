@@ -27,7 +27,7 @@
             </div>
 
             <nav class="sidebar-nav">
-                <a href="dashboard.html" class="nav-item active">
+                <a href="dashboard.html" class="nav-item doctor-hide active">
                     <i class="fa-solid fa-chart-pie"></i>
                     <span data-i18n="navDashboard">الرئيسية - طلبات الحجز</span>
                     <span class="nav-badge" id="sidebarAppointmentsBadge">0</span>
@@ -59,6 +59,11 @@
                     <span data-i18n="navClinicBranches">فروع العيادات</span>
                 </a>
 
+                <div class="nav-section-title admin-only-nav" style="display:none">الإدارة</div>
+                <a href="users.html" class="nav-item admin-only-nav" style="display:none">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>إدارة المستخدمين</span>
+                </a>
                 <div class="nav-section-title reports-nav" style="display:none">التقارير</div>
                 <a href="reports.html" class="nav-item reports-nav" style="display:none">
                     <i class="fa-solid fa-chart-line"></i>
@@ -152,13 +157,6 @@
                             <div class="stat-value" id="statCountCancelled">0</div>
                         </div>
                         <div class="stat-icon-wrap"><i class="fa-solid fa-ban"></i></div>
-                    </div>
-                    <div class="stat-card stat-patients">
-                        <div class="stat-info">
-                            <h3 data-i18n="statTotalPatients">إجمالي المرضى</h3>
-                            <div class="stat-value" id="statTotalPatients">0</div>
-                        </div>
-                        <div class="stat-icon-wrap"><i class="fa-solid fa-user-injured"></i></div>
                     </div>
                 </div>
 

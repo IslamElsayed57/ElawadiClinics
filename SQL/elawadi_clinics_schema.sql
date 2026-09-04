@@ -40,7 +40,7 @@ alter table public.clinic_profiles enable row level security;
 drop policy if exists "Clinic profiles readable by authenticated" on public.clinic_profiles;
 create policy "Clinic profiles readable by authenticated"
     on public.clinic_profiles for select
-    using (auth.uid() = id or exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 drop policy if exists "Only admin can update clinic profiles" on public.clinic_profiles;
 create policy "Only admin can update clinic profiles"
@@ -126,12 +126,13 @@ create table if not exists public.clinic_patients (
     full_name text not null,
     gender text not null default 'male',
     age int,
+    weight numeric(5,2),
     phone text,
     is_new_visit boolean not null default true,
-    complaint_type text,
+    visit_date date,
     complaint_details text,
-    prescription_image text,
-    lab_image text,
+    prescription_image jsonb default '[]'::jsonb,
+    lab_image jsonb default '[]'::jsonb,
     doctor_id uuid references public.doctors(id),
     status text not null default 'active',
     visits_count int not null default 1,
@@ -143,22 +144,22 @@ alter table public.clinic_patients enable row level security;
 drop policy if exists "Clinic patients readable" on public.clinic_patients;
 create policy "Clinic patients readable"
     on public.clinic_patients for select
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic patients insert" on public.clinic_patients;
 create policy "Clinic patients insert"
     on public.clinic_patients for insert
-    with check (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    with check (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic patients update" on public.clinic_patients;
 create policy "Clinic patients update"
     on public.clinic_patients for update
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic patients delete" on public.clinic_patients;
 create policy "Clinic patients delete"
     on public.clinic_patients for delete
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 -- =========================================================================
 -- 5) جدول الروشتات (Prescriptions)
@@ -169,6 +170,7 @@ create table if not exists public.clinic_prescriptions (
     patient_id uuid references public.clinic_patients(id) on delete cascade,
     patient_name text not null,
     patient_age int,
+    patient_weight numeric(5,2),
     patient_phone text,
     doctor_name text not null,
     doctor_id uuid references public.doctors(id),
@@ -183,22 +185,22 @@ alter table public.clinic_prescriptions enable row level security;
 drop policy if exists "Clinic prescriptions readable" on public.clinic_prescriptions;
 create policy "Clinic prescriptions readable"
     on public.clinic_prescriptions for select
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic prescriptions insert" on public.clinic_prescriptions;
 create policy "Clinic prescriptions insert"
     on public.clinic_prescriptions for insert
-    with check (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    with check (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic prescriptions update" on public.clinic_prescriptions;
 create policy "Clinic prescriptions update"
     on public.clinic_prescriptions for update
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic prescriptions delete" on public.clinic_prescriptions;
 create policy "Clinic prescriptions delete"
     on public.clinic_prescriptions for delete
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 -- =========================================================================
 -- 6) جدول حجوزات العيادة - بوليصة قراءة/تعديل للموظفين
@@ -213,12 +215,12 @@ create policy "Public can insert clinic appointments"
 drop policy if exists "Authenticated can read clinic appointments" on public.clinic_appointments;
 create policy "Authenticated can read clinic appointments"
     on public.clinic_appointments for select
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 drop policy if exists "Authenticated can update clinic appointments" on public.clinic_appointments;
 create policy "Authenticated can update clinic appointments"
     on public.clinic_appointments for update
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 -- =========================================================================
 -- 7) جدول الأحداث/الإشعارات (اختياري للتنبيهات الداخلية)
@@ -237,16 +239,16 @@ alter table public.clinic_events enable row level security;
 drop policy if exists "Clinic events readable" on public.clinic_events;
 create policy "Clinic events readable"
     on public.clinic_events for select
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic events insert" on public.clinic_events;
 create policy "Clinic events insert"
-    on public.clinic_events for insert with check (true);
+    on public.clinic_events for insert with check (auth.uid() IS NOT NULL);
 
 drop policy if exists "Clinic events update" on public.clinic_events;
 create policy "Clinic events update"
     on public.clinic_events for update
-    using (exists (select 1 from public.clinic_profiles cp where cp.id = auth.uid()));
+    using (auth.uid() IS NOT NULL);
 
 -- =========================================================================
 -- 8) STORAGE BUCKET لرفع صور العيادة (الروشتة / التحاليل / توقيع الطبيب)
@@ -264,6 +266,27 @@ create policy "Clinic uploads read"
 drop policy if exists "Clinic uploads write" on storage.objects;
 create policy "Clinic uploads write"
     on storage.objects for insert with check (bucket_id = 'clinic-uploads' and auth.role() = 'authenticated');
+
+-- =========================================================================
+-- 9) إضافة أعمدة جديدة لجداول clinic_patients و clinic_prescriptions
+-- =========================================================================
+alter table public.clinic_patients
+    add column if not exists followup_days int;
+
+alter table public.clinic_prescriptions
+    add column if not exists diagnosis text;
+
+alter table public.clinic_prescriptions
+    add column if not exists tests jsonb;
+
+alter table public.clinic_appointments
+    add column if not exists visit_fee numeric(10,2);
+
+alter table public.clinic_prescriptions
+    add column if not exists visit_fee numeric(10,2);
+
+alter table public.clinic_profiles
+    add column if not exists branch_id uuid references public.clinic_branches(id);
 
 -- =========================================================================
 -- مهم جداً بعد التشغيل: سجّل الأدمن الأول في جدول clinic_profiles

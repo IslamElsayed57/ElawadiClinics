@@ -2,11 +2,17 @@
 // عيادات العوضي (Elawadi Clinics) - Main Dashboard Controller
 // ==========================================================================
 
+let currentUserDoctorId = null;
+let isDoctor = false;
+
 document.addEventListener("DOMContentLoaded", async () => {
     utils.setupMobileSidebar();
 
     const isAuthed = await auth.init();
     if (!isAuthed) return;
+
+    isDoctor = auth.profile?.clinic_role === "doctor";
+    currentUserDoctorId = auth.profile?.doctor_id || null;
 
     notifications.init();
     await loadDashboardStats();
@@ -26,7 +32,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadDashboardStats() {
     try {
         const client = db.getClient();
-        const { data, error } = await client.from("clinic_appointments").select("id, status");
+        let query = client.from("clinic_appointments").select("id, status");
+
+        // Doctor: only own appointments
+        if (isDoctor && currentUserDoctorId) {
+            query = query.eq("doctor_id", currentUserDoctorId);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
 
         const counts = { new: 0, confirmed: 0, completed: 0, cancelled: 0 };
@@ -44,8 +57,12 @@ async function loadDashboardStats() {
         set("statCountCompleted", counts.completed);
         set("statCountCancelled", counts.cancelled);
 
-        // Total patients (respecting admin-patient visibility)
-        const { data: pts, error: ptErr } = await client.from("clinic_patients").select("id", { count: "exact" });
+        // Follow-up patients from patient data section (doctor: only own patients; admin: all)
+        let ptQuery = client.from("clinic_patients").select("id", { count: "exact" }).eq("is_new_visit", false);
+        if (isDoctor && currentUserDoctorId) {
+            ptQuery = ptQuery.eq("doctor_id", currentUserDoctorId);
+        }
+        const { data: pts, error: ptErr } = await ptQuery;
         if (!ptErr) {
             set("statTotalPatients", (pts && pts.length) || 0);
         }
@@ -63,11 +80,18 @@ async function loadRecentAppointments() {
     tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem;">${i18n.t("loadingData")}</td></tr>`;
 
     try {
-        const { data, error } = await db.getClient()
+        let query = db.getClient()
             .from("clinic_appointments")
             .select("id, patient_name, doctor_name, branch_name, preferred_day, status, created_at")
             .order("created_at", { ascending: false })
             .limit(10);
+
+        // Doctor: only own appointments
+        if (isDoctor && currentUserDoctorId) {
+            query = query.eq("doctor_id", currentUserDoctorId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -84,8 +108,18 @@ async function loadRecentAppointments() {
             const isPending = notifications.isPending(a.id);
             const dateStr = utils.formatDate(a.created_at, true);
 
+            const muteBtn = (isNew && isPending)
+                ? `<button class="btn btn-warning btn-sm mute-alert-btn"
+                        data-apt-id="${a.id}"
+                        onclick="muteAppointmentAlert('${a.id}', this)"
+                        title="${i18n.currentLang === "ar" ? "إيقاف التنبيه" : "Mute alert"}"
+                        style="margin-inline-start:0.3rem;background:#F59E0B;color:#fff;border:none;">
+                        <i class="fa-solid fa-bell-slash"></i>
+                   </button>`
+                : "";
+
             return `
-                <tr ${isNew && isPending ? 'style="background: rgba(34,211,238,0.06);"' : ''}>
+                <tr ${isNew && isPending ? 'style="background: rgba(251,191,36,0.06);"' : ''}>
                     <td><strong>${a.patient_name}</strong></td>
                     <td>${a.doctor_name || "-"}</td>
                     <td><small style="color: var(--text-muted);">${a.branch_name || "-"}</small></td>
@@ -93,9 +127,12 @@ async function loadRecentAppointments() {
                     <td>${utils.getAppointmentStatusBadge(a.status)}</td>
                     <td><small style="color: var(--text-muted);">${dateStr}</small></td>
                     <td>
-                        <button class="btn btn-outline btn-sm" onclick="openAppointmentDetails('${a.id}')">
-                            <i class="fa-solid fa-eye"></i> ${i18n.t("viewDetails")}
-                        </button>
+                        <div style="display:flex;align-items:center;gap:0.3rem;">
+                            <button class="btn btn-outline btn-sm" onclick="openAppointmentDetails('${a.id}')">
+                                <i class="fa-solid fa-eye"></i> ${i18n.t("viewDetails")}
+                            </button>
+                            ${muteBtn}
+                        </div>
                     </td>
                 </tr>
             `;
@@ -186,15 +223,49 @@ function closeAptModal() {
 
 async function updateAppointmentStatus(id, newStatus) {
     try {
-        const { error } = await db.getClient()
+        const client = db.getClient();
+
+        // If completing, fetch appointment data first to create patient
+        let appointmentData = null;
+        if (newStatus === "completed") {
+            const { data: apt } = await client
+                .from("clinic_appointments")
+                .select("*")
+                .eq("id", id)
+                .maybeSingle();
+            appointmentData = apt;
+        }
+
+        const { error } = await client
             .from("clinic_appointments")
             .update({ status: newStatus })
             .eq("id", id);
 
         if (error) throw error;
 
+        // Store fee at confirmation time if not already set
+        if (newStatus === "confirmed" && appointmentData && !appointmentData.visit_fee && appointmentData.doctor_id) {
+            const { data: docFee } = await client
+                .from("doctors")
+                .select("new_visit_fee, followup_fee")
+                .eq("id", appointmentData.doctor_id)
+                .maybeSingle();
+            if (docFee) {
+                const fee = appointmentData.is_new_visit ? (docFee.new_visit_fee || 0) : (docFee.followup_fee || 0);
+                await client
+                    .from("clinic_appointments")
+                    .update({ visit_fee: fee })
+                    .eq("id", id);
+            }
+        }
+
         if (newStatus !== "new") {
             notifications.removePendingAlert(String(id));
+        }
+
+        // When completed: auto-create patient record if not exists
+        if (newStatus === "completed" && appointmentData) {
+            await syncPatientFromAppointment(client, appointmentData);
         }
 
         utils.showToast(i18n.t("saveSuccess"), "success");
@@ -206,3 +277,72 @@ async function updateAppointmentStatus(id, newStatus) {
         utils.showToast(i18n.t("errorGeneric"), "error");
     }
 }
+
+async function syncPatientFromAppointment(client, apt) {
+    try {
+        // Check if patient already exists by phone
+        const { data: existing } = await client
+            .from("clinic_patients")
+            .select("id, visits_count")
+            .eq("phone", apt.patient_phone)
+            .maybeSingle();
+
+        if (existing) {
+            // Patient exists: increment visit count
+            await client
+                .from("clinic_patients")
+                .update({
+                    visits_count: (existing.visits_count || 1) + 1,
+                    visit_date: new Date().toISOString().slice(0, 10),
+                    updated_at: new Date().toISOString()
+                })
+                .eq("id", existing.id);
+        } else {
+            // New patient: create record from appointment
+            await client.from("clinic_patients").insert({
+                full_name: apt.patient_name,
+                phone: apt.patient_phone,
+                doctor_id: apt.doctor_id,
+                visit_date: new Date().toISOString().slice(0, 10),
+                complaint_details: apt.notes || null,
+                is_new_visit: apt.is_new_visit !== false,
+                status: "active",
+                visits_count: 1
+            });
+        }
+    } catch (e) {
+        console.warn("Auto-create patient from appointment failed:", e);
+    }
+}
+
+// ------------------------------------------------------------------
+// Mute alert per appointment (like pharmacy dashboard)
+// ------------------------------------------------------------------
+function muteAppointmentAlert(aptId, btn) {
+    notifications.removePendingAlert(String(aptId));
+
+    btn.style.opacity = "0";
+    btn.style.transform = "scale(0.8)";
+    btn.style.transition = "all 0.25s ease";
+    setTimeout(() => { btn.style.display = "none"; }, 260);
+
+    const row = btn.closest("tr");
+    if (row) row.style.background = "";
+
+    utils.showToast(i18n.currentLang === "ar" ? "تم إيقاف التنبيه" : "Alert muted", "info");
+}
+
+// Called by notifications.js when pending set changes from another tab
+window._refreshAppointmentMuteButtons = function () {
+    document.querySelectorAll(".mute-alert-btn").forEach(btn => {
+        const aptId = btn.getAttribute("data-apt-id");
+        if (!notifications.isPending(aptId)) {
+            btn.style.opacity = "0";
+            btn.style.transform = "scale(0.8)";
+            btn.style.transition = "all 0.25s ease";
+            setTimeout(() => { btn.style.display = "none"; }, 260);
+            const row = btn.closest("tr");
+            if (row) row.style.background = "";
+        }
+    });
+};

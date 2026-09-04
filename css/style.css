@@ -1012,3 +1012,75 @@ html[dir="ltr"] .search-input-group i { inset-inline-start: auto; left: 0.85rem;
     border-radius: var(--radius-md);
     object-fit: contain;
 }
+
+/* Patient autocomplete suggestions */
+.patient-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    margin-top: 2px;
+}
+.patient-suggestions.active { display: block; }
+.patient-suggestion-item {
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.88rem;
+}
+.patient-suggestion-item:last-child { border-bottom: none; }
+.patient-suggestion-item:hover { background: var(--primary-light); }
+.patient-suggestion-item .suggestion-name { font-weight: 600; }
+.patient-suggestion-item .suggestion-phone { color: var(--text-muted); font-size: 0.82rem; }
+
+/* Multi-upload */
+.multi-upload-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+.multi-upload-wrap .upload-chip { margin: 0; }
+.uploaded-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: 0;
+}
+.uploaded-preview:empty { display: none; }
+.uploaded-preview .preview-thumb {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+.uploaded-preview .preview-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.uploaded-preview .preview-thumb .remove-thumb {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #EF4444;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}

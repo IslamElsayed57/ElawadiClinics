@@ -46,7 +46,12 @@ class SupabaseService {
                 .from(CONFIG.STORAGE_BUCKET)
                 .getPublicUrl(safeName);
 
-            return data?.publicUrl || null;
+            // Ensure full URL
+            const url = data?.publicUrl || null;
+            if (url && !url.startsWith("http")) {
+                return CONFIG.SUPABASE_URL + "/storage/v1/object/public/" + CONFIG.STORAGE_BUCKET + "/" + safeName;
+            }
+            return url;
         } catch (err) {
             console.error("Unexpected clinic upload error:", err);
             return null;

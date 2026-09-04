@@ -1,15 +1,30 @@
 // ==========================================================================
 // عيادات العوضي (Elawadi Clinics) - Reports Controller
-// Admin + staff/doctor granted can_view_reports (guarded in auth.js).
+// Admin: full access | Doctor: own data only | Staff: based on can_view_reports
 // ==========================================================================
 
 let reportDoctors = [];
+let currentUserDoctorId = null;
+let isDoctor = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
     utils.setupMobileSidebar();
 
     const isAuthed = await auth.init();
     if (!isAuthed) return;
+
+    // Check role
+    isDoctor = auth.profile?.clinic_role === "doctor";
+    currentUserDoctorId = auth.profile?.doctor_id || null;
+
+    // If doctor, pre-filter by their doctor_id and disable the filter dropdown
+    if (isDoctor && currentUserDoctorId) {
+        const doctorFilter = document.getElementById("reportDoctorFilter");
+        if (doctorFilter) {
+            doctorFilter.value = currentUserDoctorId;
+            doctorFilter.disabled = true;
+        }
+    }
 
     notifications.init();
     await loadDoctorsForReport();
@@ -33,8 +48,14 @@ async function loadDoctorsForReport() {
         reportDoctors = data || [];
         const select = document.getElementById("reportDoctorFilter");
         if (select) {
-            select.innerHTML = `<option value="all">${i18n.currentLang === "en" ? "All doctors" : "كل الأطباء"}</option>` +
-                reportDoctors.map(d => `<option value="${d.id}">${i18n.currentLang === "en" ? (d.name_en || d.name_ar) : d.name_ar}</option>`).join("");
+            // If doctor, only show their own name
+            if (isDoctor && currentUserDoctorId) {
+                const myDoc = reportDoctors.find(d => d.id === currentUserDoctorId);
+                select.innerHTML = `<option value="${currentUserDoctorId}">${myDoc ? (i18n.currentLang === "en" ? (myDoc.name_en || myDoc.name_ar) : myDoc.name_ar) : "أنا"}</option>`;
+            } else {
+                select.innerHTML = `<option value="all">${i18n.currentLang === "en" ? "All doctors" : "كل الأطباء"}</option>` +
+                    reportDoctors.map(d => `<option value="${d.id}">${i18n.currentLang === "en" ? (d.name_en || d.name_ar) : d.name_ar}</option>`).join("");
+            }
         }
     } catch (e) {
         console.error("Load doctors for report error:", e);
@@ -65,7 +86,6 @@ function getDateRange() {
 }
 
 async function loadReports() {
-    // Ensure shared elements exist
     const summaryEl = document.getElementById("reportSummaryCards");
     const tbody = document.getElementById("reportsTableBody");
     if (!summaryEl || !tbody) return;
@@ -76,6 +96,17 @@ async function loadReports() {
     const doctorFilter = document.getElementById("reportDoctorFilter")?.value || "all";
     const { from, to } = getDateRange();
 
+    // Determine which doctor IDs to filter by
+    let filterDoctorIds = null;
+
+    if (isDoctor && currentUserDoctorId) {
+        // Doctor: always filter by own ID only
+        filterDoctorIds = [currentUserDoctorId];
+    } else if (doctorFilter !== "all") {
+        // Admin/staff selected a specific doctor from dropdown
+        filterDoctorIds = [doctorFilter];
+    }
+
     try {
         const client = db.getClient();
         let appointmentsQuery = client.from("clinic_appointments").select("*");
@@ -83,59 +114,56 @@ async function loadReports() {
 
         if (from) appointmentsQuery = appointmentsQuery.gte("created_at", from.toISOString());
         if (to) appointmentsQuery = appointmentsQuery.lt("created_at", to.toISOString());
-        if (doctorFilter !== "all") appointmentsQuery = appointmentsQuery.eq("doctor_id", doctorFilter);
+        if (filterDoctorIds) appointmentsQuery = appointmentsQuery.in("doctor_id", filterDoctorIds);
 
         if (from) prescriptionsQuery = prescriptionsQuery.gte("created_at", from.toISOString());
         if (to) prescriptionsQuery = prescriptionsQuery.lt("created_at", to.toISOString());
-        if (doctorFilter !== "all") prescriptionsQuery = prescriptionsQuery.eq("doctor_id", doctorFilter);
+        if (filterDoctorIds) prescriptionsQuery = prescriptionsQuery.in("doctor_id", filterDoctorIds);
 
-        const [apptRes, rxRes] = await Promise.all([appointmentsQuery, prescriptionsQuery]);
+        const [apptRes, rxRes, patientsRes] = await Promise.all([
+            appointmentsQuery,
+            prescriptionsQuery,
+            client.from("clinic_patients").select("id, doctor_id, is_new_visit, created_at")
+        ]);
 
         if (apptRes.error) throw apptRes.error;
         if (rxRes.error) throw rxRes.error;
 
         const appointments = apptRes.data || [];
         const prescriptions = rxRes.data || [];
+        const allPatients = patientsRes.data || [];
+        const patients = allPatients.filter(p => {
+            if (filterDoctorIds && !filterDoctorIds.includes(p.doctor_id)) return false;
+            if (from && new Date(p.created_at) < from) return false;
+            if (to && new Date(p.created_at) >= to) return false;
+            return true;
+        });
 
         // ---- Summary cards ----
         const totalAppointments = appointments.length;
         const confirmed = appointments.filter(a => (a.status || "").toLowerCase() === "confirmed" || (a.status || "").toLowerCase() === "completed").length;
         const newVisits = appointments.filter(a => (a.is_new_visit === true) || ((a.visit_type || "").toLowerCase() === "new")).length;
         const totalRx = prescriptions.length;
-        const uniquePatients = new Set([...appointments.map(a => a.patient_name), ...prescriptions.map(p => p.patient_name)]).size;
+        // Patients count comes from the "بيانات المرضى" (clinic_patients) table
+        // only — i.e. patients actually registered via intake — not from
+        // appointment/prescription patient names, which can include people
+        // who booked but were never formally taken in.
+        const uniquePatients = patients.length;
 
-        // Estimated revenue from prescriptions (doctor fees)
         let estimatedRevenue = 0;
-        for (const rx of prescriptions) {
-            if (rx.doctor_id) {
-                const doc = reportDoctors.find(d => d.id === rx.doctor_id);
-                if (doc) {
-                    const fee = await getDoctorFee(rx.doctor_id);
-                    estimatedRevenue += fee;
-                }
-            }
+        for (const doc of reportDoctors) {
+            const docPatients = patients.filter(p => p.doctor_id === doc.id);
+            const newCount = docPatients.filter(p => p.is_new_visit === true).length;
+            const followCount = docPatients.filter(p => p.is_new_visit === false).length;
+            const fee = await getDoctorFee(doc.id);
+            const followFee = await getDoctorFollowupFee(doc.id);
+            estimatedRevenue += (newCount * fee) + (followCount * followFee);
         }
 
         summaryEl.innerHTML = `
-            <div class="stat-card stat-blue">
-                <div class="stat-info"><h3>${i18n.currentLang === "en" ? "Appointments" : "الزيارات / الحجوزات"}</h3><div class="stat-value">${totalAppointments}</div></div>
-                <div class="stat-icon-wrap"><i class="fa-solid fa-calendar-check"></i></div>
-            </div>
-            <div class="stat-card stat-orange">
-                <div class="stat-info"><h3>${i18n.currentLang === "en" ? "Confirmed/Completed" : "مؤكد / مكتمل"}</h3><div class="stat-value">${confirmed}</div></div>
-                <div class="stat-icon-wrap"><i class="fa-solid fa-circle-check"></i></div>
-            </div>
-            <div class="stat-card stat-green">
-                <div class="stat-info"><h3>${i18n.currentLang === "en" ? "New visits" : "كشوفات جديدة"}</h3><div class="stat-value">${newVisits}</div></div>
-                <div class="stat-icon-wrap"><i class="fa-solid fa-user-plus"></i></div>
-            </div>
             <div class="stat-card stat-purple">
                 <div class="stat-info"><h3>${i18n.currentLang === "en" ? "Prescriptions" : "الروشتات"}</h3><div class="stat-value">${totalRx}</div></div>
                 <div class="stat-icon-wrap"><i class="fa-solid fa-prescription"></i></div>
-            </div>
-            <div class="stat-card stat-gold">
-                <div class="stat-info"><h3>${i18n.currentLang === "en" ? "Patients" : "المرضى"}</h3><div class="stat-value">${uniquePatients}</div></div>
-                <div class="stat-icon-wrap"><i class="fa-solid fa-users"></i></div>
             </div>
             <div class="stat-card stat-completed">
                 <div class="stat-info"><h3>${i18n.currentLang === "en" ? "Est. value" : "القيمة التقديرية"}</h3><div class="stat-value">${utils.formatCurrency(estimatedRevenue)}</div></div>
@@ -143,20 +171,36 @@ async function loadReports() {
             </div>
         `;
 
-        // ---- Per-doctor table ----
-        const doctors = reportDoctors.length ? reportDoctors : [{ id: null, name_ar: "غير محدد", name_en: "Unassigned" }];
+        // ---- Per-doctor table (admin sees all, doctor sees only self) ----
+        let doctorsToShow = reportDoctors;
+        if (isDoctor && currentUserDoctorId) {
+            doctorsToShow = reportDoctors.filter(d => d.id === currentUserDoctorId);
+        }
+
+        if (doctorsToShow.length === 0) {
+            doctorsToShow = [{ id: null, name_ar: "غير محدد", name_en: "Unassigned" }];
+        }
 
         const rows = [];
-        for (const doc of doctors) {
+        for (const doc of doctorsToShow) {
             const dAppts = appointments.filter(a => a.doctor_id === doc.id);
             const dRx = prescriptions.filter(r => r.doctor_id === doc.id);
-            const dPatients = new Set([...dAppts.map(a => a.patient_name), ...dRx.map(r => r.patient_name)]);
-            const newCount = dAppts.filter(a => (a.is_new_visit === true) || ((a.visit_type || "").toLowerCase() === "new")).length;
-            const followCount = dAppts.length - newCount;
-            const fee = await getDoctorFee(doc.id);
-            const estValue = dRx.length * fee;
+            const docPatients = patients.filter(p => p.doctor_id === doc.id);
+            const dPatients = docPatients;
+            const newCount = docPatients.filter(p => p.is_new_visit === true).length;
+            const followCount = docPatients.filter(p => p.is_new_visit === false).length;
+            const confirmedVisits = dAppts.filter(a => {
+                const s = (a.status || "").toLowerCase();
+                return s === "confirmed" || s === "completed";
+            }).length;
 
-            rows.push({ doc, dAppts, dRx, dPatients, newCount, followCount, estValue });
+            // Revenue: new visit fee × new visits + followup fee × followup visits
+            let estValue = 0;
+            const fee = await getDoctorFee(doc.id);
+            const followFee = await getDoctorFollowupFee(doc.id);
+            estValue = (newCount * fee) + (followCount * followFee);
+
+            rows.push({ doc, dAppts, dRx, dPatients, newCount, followCount, confirmedVisits, estValue });
         }
 
         rows.sort((a, b) => (b.dAppts.length + b.dRx.length) - (a.dAppts.length + a.dRx.length));
@@ -166,11 +210,11 @@ async function loadReports() {
             return `
                 <tr>
                     <td><strong>${name}</strong></td>
-                    <td><span class="badge badge-info">${r.dAppts.length + r.dRx.length}</span></td>
+                    <td><span class="badge badge-info">${r.confirmedVisits}</span></td>
                     <td>${r.newCount}</td>
                     <td>${r.followCount}</td>
                     <td><span class="badge badge-purple">${r.dRx.length}</span></td>
-                    <td>${r.dPatients.size}</td>
+                    <td>${r.dPatients.length}</td>
                     <td><strong style="color:var(--primary);">${utils.formatCurrency(r.estValue)}</strong></td>
                 </tr>
             `;
@@ -190,6 +234,19 @@ async function getDoctorFee(doctorId) {
         const { data } = await db.getClient().from("doctors").select("new_visit_fee").eq("id", doctorId).maybeSingle();
         feeCache[doctorId] = data?.new_visit_fee || 0;
         return feeCache[doctorId];
+    } catch (e) {
+        return 0;
+    }
+}
+
+const followFeeCache = {};
+async function getDoctorFollowupFee(doctorId) {
+    if (!doctorId) return 0;
+    if (followFeeCache[doctorId] !== undefined) return followFeeCache[doctorId];
+    try {
+        const { data } = await db.getClient().from("doctors").select("followup_fee").eq("id", doctorId).maybeSingle();
+        followFeeCache[doctorId] = data?.followup_fee || 0;
+        return followFeeCache[doctorId];
     } catch (e) {
         return 0;
     }

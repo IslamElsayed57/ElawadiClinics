@@ -3,6 +3,11 @@
 // ==========================================================================
 
 let doctorsOptions = [];
+let currentUserDoctorId = null;
+let isDoctor = false;
+let rxDroppedFiles = [];
+let labDroppedFiles = [];
+let allPatients = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
     utils.setupMobileSidebar();
@@ -10,31 +15,133 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isAuthed = await auth.init();
     if (!isAuthed) return;
 
+    isDoctor = auth.profile?.clinic_role === "doctor";
+    currentUserDoctorId = auth.profile?.doctor_id || null;
+
     notifications.init();
     await loadDoctors();
+    await loadPatientsForAutocomplete();
 
-    // Attach file upload chips
-    setupUploadChip("intakeRxFile", "rxChip", i18n.t("prescriptionImageUpload"));
-    setupUploadChip("intakeLabFile", "labChip", i18n.t("labImageUpload"));
+    if (isDoctor && currentUserDoctorId) {
+        const doctorSelect = document.getElementById("intakeDoctor");
+        if (doctorSelect) {
+            doctorSelect.value = currentUserDoctorId;
+            doctorSelect.disabled = true;
+        }
+    }
 
-    window.onLanguageChange = () => {
-        setupUploadChip("intakeRxFile", "rxChip", i18n.t("prescriptionImageUpload"));
-        setupUploadChip("intakeLabFile", "labChip", i18n.t("labImageUpload"));
-    };
+    setupMultiUpload("intakeRxFile", "rxPreview", rxDroppedFiles);
+    setupMultiUpload("intakeLabFile", "labPreview", labDroppedFiles);
+    setupIntakePatientAutocomplete();
+    setIntakeTodayDate();
 });
 
-function setupUploadChip(inputId, chipId, defaultLabel) {
+function setIntakeTodayDate() {
+    const dt = document.getElementById("intakeDate");
+    if (dt) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        dt.value = `${yyyy}-${mm}-${dd}`;
+    }
+}
+
+function setupMultiUpload(inputId, previewId, filesArray) {
     const input = document.getElementById(inputId);
-    const chip = document.getElementById(chipId);
-    if (!input || !chip) return;
+    const preview = document.getElementById(previewId);
+    if (!input || !preview) return;
 
     input.addEventListener("change", () => {
-        if (input.files && input.files[0]) {
-            chip.classList.add("has-file");
-            chip.querySelector("span").textContent = input.files[0].name;
-        } else {
-            chip.classList.remove("has-file");
-            chip.querySelector("span").textContent = defaultLabel;
+        for (const file of input.files) {
+            if (!filesArray.find(f => f.name === file.name && f.size === file.size)) {
+                filesArray.push(file);
+            }
+        }
+        input.value = "";
+        renderPreview(preview, filesArray, inputId);
+    });
+}
+
+function renderPreview(container, filesArray, inputId) {
+    container.innerHTML = "";
+    filesArray.forEach((file, idx) => {
+        const thumb = document.createElement("div");
+        thumb.className = "preview-thumb";
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        thumb.appendChild(img);
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "remove-thumb";
+        removeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        removeBtn.addEventListener("click", () => {
+            filesArray.splice(idx, 1);
+            renderPreview(container, filesArray, inputId);
+        });
+        thumb.appendChild(removeBtn);
+        container.appendChild(thumb);
+    });
+}
+
+async function loadPatientsForAutocomplete() {
+    try {
+        let query = db.getClient().from("clinic_patients").select("id, full_name, phone, age, gender, weight, doctor_id");
+        if (isDoctor && currentUserDoctorId) {
+            query = query.eq("doctor_id", currentUserDoctorId);
+        }
+        const { data } = await query;
+        allPatients = data || [];
+    } catch (e) {
+        console.error("Load patients for autocomplete error:", e);
+    }
+}
+
+function setupIntakePatientAutocomplete() {
+    const input = document.getElementById("intakeName");
+    const suggestionsEl = document.getElementById("intakePatientSuggestions");
+    if (!input || !suggestionsEl) return;
+
+    input.addEventListener("input", () => {
+        const val = input.value.trim().toLowerCase();
+        if (val.length < 1) {
+            suggestionsEl.classList.remove("active");
+            return;
+        }
+
+        const matches = allPatients.filter(p =>
+            (p.full_name || "").toLowerCase().includes(val) ||
+            (p.phone || "").includes(val)
+        ).slice(0, 8);
+
+        if (matches.length === 0) {
+            suggestionsEl.classList.remove("active");
+            return;
+        }
+
+        suggestionsEl.innerHTML = matches.map(p => `
+            <div class="patient-suggestion-item" data-name="${p.full_name}" data-phone="${p.phone || ""}" data-age="${p.age || ""}" data-gender="${p.gender || "male"}" data-weight="${p.weight || ""}">
+                <span class="suggestion-name">${p.full_name}</span>
+                <span class="suggestion-phone">${p.phone || ""}</span>
+            </div>
+        `).join("");
+        suggestionsEl.classList.add("active");
+
+        suggestionsEl.querySelectorAll(".patient-suggestion-item").forEach(item => {
+            item.addEventListener("click", () => {
+                input.value = item.dataset.name;
+                if (item.dataset.phone) document.getElementById("intakePhone").value = item.dataset.phone;
+                if (item.dataset.age) document.getElementById("intakeAge").value = item.dataset.age;
+                if (item.dataset.gender) document.getElementById("intakeGender").value = item.dataset.gender;
+                if (item.dataset.weight) document.getElementById("intakeWeight").value = item.dataset.weight;
+                document.getElementById("intakeVisitType").value = "followup";
+                suggestionsEl.classList.remove("active");
+            });
+        });
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest("#intakeName") && !e.target.closest("#intakePatientSuggestions")) {
+            suggestionsEl.classList.remove("active");
         }
     });
 }
@@ -43,7 +150,7 @@ async function loadDoctors() {
     try {
         const { data, error } = await db.getClient()
             .from("doctors")
-            .select("id, name_ar, name_en")
+            .select("id, name_ar, name_en, new_visit_fee, followup_fee")
             .eq("is_active", true)
             .order("created_at", { ascending: true });
 
@@ -70,9 +177,10 @@ async function handleIntakeSubmit(e) {
     const age = parseInt(document.getElementById("intakeAge").value, 10) || null;
     const phone = document.getElementById("intakePhone").value.trim();
     const isNew = document.getElementById("intakeVisitType").value === "new";
-    const complaint = document.getElementById("intakeComplaint").value.trim();
     const details = document.getElementById("intakeDetails").value.trim();
     const doctorId = document.getElementById("intakeDoctor").value || null;
+    const visitDate = document.getElementById("intakeDate").value || null;
+    const weight = parseFloat(document.getElementById("intakeWeight").value) || null;
 
     if (!name) {
         utils.showToast(i18n.currentLang === "ar" ? "يرجى كتابة اسم المريض" : "Please provide patient name", "error");
@@ -84,27 +192,32 @@ async function handleIntakeSubmit(e) {
     btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${i18n.t("loadingData")}`;
 
     try {
-        // Optional image uploads (config bucket)
-        let rxUrl = null;
-        let labUrl = null;
+        // Upload multiple rx images
+        const rxUrls = [];
+        for (const file of rxDroppedFiles) {
+            const url = await db.uploadClinicFile(file, "prescriptions");
+            if (url) rxUrls.push(url);
+        }
 
-        const rxFile = document.getElementById("intakeRxFile").files[0];
-        if (rxFile) rxUrl = await db.uploadClinicFile(rxFile, "prescriptions");
-
-        const labFile = document.getElementById("intakeLabFile").files[0];
-        if (labFile) labUrl = await db.uploadClinicFile(labFile, "labs");
+        // Upload multiple lab images
+        const labUrls = [];
+        for (const file of labDroppedFiles) {
+            const url = await db.uploadClinicFile(file, "labs");
+            if (url) labUrls.push(url);
+        }
 
         const payload = {
             full_name: name,
             gender: gender,
             age: age,
             phone: phone,
+            weight: weight,
             is_new_visit: isNew,
-            complaint_type: complaint,
             complaint_details: details,
             doctor_id: doctorId,
-            prescription_image: rxUrl,
-            lab_image: labUrl,
+            visit_date: visitDate,
+            prescription_image: rxUrls.length > 0 ? JSON.stringify(rxUrls) : "[]",
+            lab_image: labUrls.length > 0 ? JSON.stringify(labUrls) : "[]",
             status: "active"
         };
 
@@ -114,15 +227,13 @@ async function handleIntakeSubmit(e) {
         utils.showToast(i18n.t("patientSaved"), "success");
         e.target.reset();
 
-        // Reset upload chips
-        ["rxChip", "labChip"].forEach(id => {
-            const chip = document.getElementById(id);
-            if (chip) chip.classList.remove("has-file");
-        });
-        if (document.getElementById("rxChip")) document.getElementById("rxChip").querySelector("span").textContent = i18n.t("prescriptionImageUpload");
-        if (document.getElementById("labChip")) document.getElementById("labChip").querySelector("span").textContent = i18n.t("labImageUpload");
+        rxDroppedFiles = [];
+        labDroppedFiles = [];
+        const rxPrev = document.getElementById("rxPreview");
+        const labPrev = document.getElementById("labPreview");
+        if (rxPrev) rxPrev.innerHTML = "";
+        if (labPrev) labPrev.innerHTML = "";
 
-        // Redirect to patients page
         setTimeout(() => { window.location.href = "patients.html"; }, 1200);
 
     } catch (err) {
