@@ -198,6 +198,11 @@ async function openAppointmentDetails(id) {
             </div>
             <p style="margin:0 0 0.25rem;"><strong>${i18n.t("appointmentNotes")}:</strong></p>
             <p style="margin:0; background: var(--bg-surface-subtle); padding: 0.75rem; border-radius: var(--radius-md); white-space: pre-wrap;">${data.notes || "-"}</p>
+            ${data.cancellation_reason ? `
+            <div style="margin-top:0.75rem; padding:0.75rem; background:#fff1f1; border:1px solid #fca5a5; border-radius:var(--radius-md);">
+                <p style="margin:0 0 0.25rem; color:#dc2626;"><strong><i class="fa-solid fa-ban" style="margin-inline-end:0.3rem;"></i>${i18n.t("cancelReasonLabel")}</strong></p>
+                <p style="margin:0; white-space:pre-wrap; color:#7f1d1d;">${data.cancellation_reason}</p>
+            </div>` : ""}
         `;
 
         const currentStatus = (data.status || "new").toLowerCase();
@@ -205,12 +210,12 @@ async function openAppointmentDetails(id) {
         let btns = `<button class="btn btn-secondary" onclick="closeAptModal()">${i18n.t("close")}</button>`;
         if (currentStatus === "new") {
             btns += `
-                <button class="btn btn-danger" onclick="updateAppointmentStatus('${data.id}', 'cancelled')"><i class="fa-solid fa-ban"></i> ${i18n.t("actionCancel")}</button>
+                <button class="btn btn-danger" onclick="askCancelReason('${data.id}')"><i class="fa-solid fa-ban"></i> ${i18n.t("actionCancel")}</button>
                 <button class="btn btn-primary" onclick="updateAppointmentStatus('${data.id}', 'confirmed')"><i class="fa-solid fa-circle-check"></i> ${i18n.t("actionConfirm")}</button>
             `;
         } else if (currentStatus === "confirmed") {
             btns += `
-                <button class="btn btn-danger" onclick="updateAppointmentStatus('${data.id}', 'cancelled')"><i class="fa-solid fa-ban"></i> ${i18n.t("actionCancel")}</button>
+                <button class="btn btn-danger" onclick="askCancelReason('${data.id}')"><i class="fa-solid fa-ban"></i> ${i18n.t("actionCancel")}</button>
                 <button class="btn btn-success" onclick="updateAppointmentStatus('${data.id}', 'completed')"><i class="fa-solid fa-badge-check"></i> ${i18n.t("actionComplete")}</button>
             `;
         }
@@ -229,7 +234,58 @@ function closeAptModal() {
     if (modal) modal.classList.remove("active");
 }
 
-async function updateAppointmentStatus(id, newStatus) {
+// ------------------------------------------------------------------
+// Cancel reason sub-modal
+// ------------------------------------------------------------------
+function askCancelReason(appointmentId) {
+    // Remove existing cancel reason modal if any
+    const existing = document.getElementById("cancelReasonModal");
+    if (existing) existing.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "cancelReasonModal";
+    modal.className = "modal-backdrop active";
+    modal.style.cssText = "z-index: 10000;";
+    modal.innerHTML = `
+        <div class="modal-card" style="max-width:480px;">
+            <div class="modal-header">
+                <h4 class="card-title">
+                    <i class="fa-solid fa-ban" style="color:#EF4444;margin-inline-end:0.4rem;"></i>
+                    ${i18n.t("cancelReasonTitle")}
+                </h4>
+                <button class="btn btn-icon btn-sm" onclick="document.getElementById('cancelReasonModal').remove()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" style="margin-bottom:0.5rem;display:block;">
+                    ${i18n.t("cancelReasonLabel")}
+                </label>
+                <textarea id="cancelReasonInput" class="form-control" rows="4"
+                    placeholder="${i18n.t("cancelReasonPlaceholder")}"
+                    style="width:100%;resize:vertical;"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('cancelReasonModal').remove()">
+                    ${i18n.t("close")}
+                </button>
+                <button class="btn btn-danger" onclick="submitCancellation('${appointmentId}')">
+                    <i class="fa-solid fa-ban"></i> ${i18n.t("cancelConfirmBtn")}
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    setTimeout(() => { const ta = document.getElementById("cancelReasonInput"); if (ta) ta.focus(); }, 100);
+}
+
+async function submitCancellation(appointmentId) {
+    const reason = (document.getElementById("cancelReasonInput")?.value || "").trim();
+    document.getElementById("cancelReasonModal")?.remove();
+    await updateAppointmentStatus(appointmentId, "cancelled", reason);
+}
+
+async function updateAppointmentStatus(id, newStatus, cancellationReason = "") {
     try {
         const client = db.getClient();
 
@@ -244,9 +300,15 @@ async function updateAppointmentStatus(id, newStatus) {
             appointmentData = apt;
         }
 
+        // Build update payload
+        const updatePayload = { status: newStatus };
+        if (newStatus === "cancelled") {
+            updatePayload.cancellation_reason = cancellationReason || null;
+        }
+
         const { error } = await client
             .from("clinic_appointments")
-            .update({ status: newStatus })
+            .update(updatePayload)
             .eq("id", id);
 
         if (error) throw error;
@@ -271,9 +333,18 @@ async function updateAppointmentStatus(id, newStatus) {
             notifications.removePendingAlert(String(id));
         }
 
-        // When completed: auto-create patient record if not exists
+        // When completed: redirect to intake to complete patient data manually
         if (newStatus === "completed" && appointmentData) {
-            await syncPatientFromAppointment(client, appointmentData);
+            localStorage.setItem("clinic_intake_prefill", JSON.stringify({
+                full_name:  appointmentData.patient_name  || "",
+                phone:      appointmentData.patient_phone || "",
+                doctor_id:  appointmentData.doctor_id     || "",
+                notes:      appointmentData.notes         || ""
+            }));
+            utils.showToast(i18n.t("saveSuccess"), "success");
+            closeAptModal();
+            setTimeout(() => { window.location.href = "intake.html"; }, 800);
+            return;
         }
 
         utils.showToast(i18n.t("saveSuccess"), "success");
@@ -286,42 +357,7 @@ async function updateAppointmentStatus(id, newStatus) {
     }
 }
 
-async function syncPatientFromAppointment(client, apt) {
-    try {
-        // Check if patient already exists by phone
-        const { data: existing } = await client
-            .from("clinic_patients")
-            .select("id, visits_count")
-            .eq("phone", apt.patient_phone)
-            .maybeSingle();
-
-        if (existing) {
-            // Patient exists: increment visit count
-            await client
-                .from("clinic_patients")
-                .update({
-                    visits_count: (existing.visits_count || 1) + 1,
-                    visit_date: new Date().toISOString().slice(0, 10),
-                    updated_at: new Date().toISOString()
-                })
-                .eq("id", existing.id);
-        } else {
-            // New patient: create record from appointment
-            await client.from("clinic_patients").insert({
-                full_name: apt.patient_name,
-                phone: apt.patient_phone,
-                doctor_id: apt.doctor_id,
-                visit_date: new Date().toISOString().slice(0, 10),
-                complaint_details: apt.notes || null,
-                is_new_visit: apt.is_new_visit !== false,
-                status: "active",
-                visits_count: 1
-            });
-        }
-    } catch (e) {
-        console.warn("Auto-create patient from appointment failed:", e);
-    }
-}
+// syncPatientFromAppointment removed - patient creation now handled manually via intake.html
 
 // ------------------------------------------------------------------
 // Mute alert per appointment (like pharmacy dashboard)

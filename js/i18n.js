@@ -35,7 +35,7 @@ const TRANSLATIONS = {
         brandName: "عيادات العوضي",
         brandSubtitle: "لوحة تحكم العيادات",
 
-        navDashboard: "الرئيسية - طلبات الحجز",
+        navDashboard: "طلبات الحجز",
         navAppointments: "طلبات الحجز",
         navPatients: "بيانات المرضى",
         navIntake: "استقبال المرضى",
@@ -99,6 +99,10 @@ const TRANSLATIONS = {
         actionConfirm: "تأكيد الحجز",
         actionCancel: "إلغاء الحجز",
         actionComplete: "إتمام الحجز",
+        cancelReasonTitle: "سبب الإلغاء",
+        cancelReasonPlaceholder: "اكتب سبب إلغاء الحجز هنا...",
+        cancelReasonLabel: "سبب الإلغاء:",
+        cancelConfirmBtn: "تأكيد الإلغاء",
         newAppointmentAlert: "طلب حجز عيادة جديد وارد الآن!",
 
         // Patient intake
@@ -351,7 +355,7 @@ const TRANSLATIONS = {
         brandName: "Elawadi Clinics",
         brandSubtitle: "Clinics Management Dashboard",
 
-        navDashboard: "Dashboard - Appointments",
+        navDashboard: "Appointments",
         navAppointments: "Appointments",
         navPatients: "Patient Profiles",
         navIntake: "Patient Intake",
@@ -413,6 +417,10 @@ const TRANSLATIONS = {
         actionConfirm: "Confirm Booking",
         actionCancel: "Cancel Booking",
         actionComplete: "Complete Booking",
+        cancelReasonTitle: "Cancellation Reason",
+        cancelReasonPlaceholder: "Enter the reason for cancellation...",
+        cancelReasonLabel: "Cancellation Reason:",
+        cancelConfirmBtn: "Confirm Cancellation",
         newAppointmentAlert: "New clinic booking received!",
 
         intakeTitle: "Patient Intake",

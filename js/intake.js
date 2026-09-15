@@ -34,7 +34,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupMultiUpload("intakeLabFile", "labPreview", labDroppedFiles);
     setupIntakePatientAutocomplete();
     setIntakeTodayDate();
+    prefillFromAppointment();
 });
+
+// Pre-fill intake form from a completed appointment (via dashboard)
+function prefillFromAppointment() {
+    try {
+        const raw = localStorage.getItem("clinic_intake_prefill");
+        if (!raw) return;
+        localStorage.removeItem("clinic_intake_prefill");
+
+        const data = JSON.parse(raw);
+
+        const nameField   = document.getElementById("intakeName");
+        const phoneField  = document.getElementById("intakePhone");
+        const doctorField = document.getElementById("intakeDoctor");
+        const detailsField = document.getElementById("intakeDetails");
+
+        if (nameField  && data.full_name) nameField.value  = data.full_name;
+        if (phoneField && data.phone)     phoneField.value = data.phone;
+        if (detailsField && data.notes)   detailsField.value = data.notes;
+
+        // Doctor select may not be populated yet — wait a tick
+        if (data.doctor_id) {
+            setTimeout(() => {
+                const sel = document.getElementById("intakeDoctor");
+                if (sel && !sel.disabled) sel.value = data.doctor_id;
+            }, 300);
+        }
+    } catch (e) {
+        console.warn("Intake prefill error:", e);
+    }
+}
 
 function setIntakeTodayDate() {
     const dt = document.getElementById("intakeDate");
