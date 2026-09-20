@@ -3,10 +3,36 @@
 // Roles: admin / staff / doctor  (جدول clinic_profiles)
 // ==========================================================================
 
+// Last known role of the signed-in account. Used to decide which sidebar links
+// to show BEFORE the profile finishes loading from Supabase, so links the
+// account is not allowed to use never flash on screen while navigating.
+const ROLE_CACHE_KEY = "elawadi_clinic_role";
+
 class AuthService {
     constructor() {
         this.user = null;
         this.profile = null;
+
+        // Runs synchronously when this script loads (before any network call):
+        // the CSS rules keyed on <html data-clinic-role> (see style.css) then
+        // keep the restricted sidebar links hidden from the very first paint.
+        try {
+            const cachedRole = localStorage.getItem(ROLE_CACHE_KEY);
+            if (cachedRole) document.documentElement.setAttribute("data-clinic-role", cachedRole);
+        } catch (e) { /* storage unavailable: links simply stay hidden until the profile loads */ }
+    }
+
+    /** Publishes the confirmed role on <html> and remembers it for the next page. */
+    syncRoleAttribute() {
+        if (!this.profile) return;
+        const role = this.profile.clinic_role || "staff";
+        document.documentElement.setAttribute("data-clinic-role", role);
+        try { localStorage.setItem(ROLE_CACHE_KEY, role); } catch (e) { /* ignore */ }
+    }
+
+    clearRoleCache() {
+        document.documentElement.removeAttribute("data-clinic-role");
+        try { localStorage.removeItem(ROLE_CACHE_KEY); } catch (e) { /* ignore */ }
     }
 
     /**
@@ -18,12 +44,14 @@ class AuthService {
             const { data: { session }, error } = await db.getClient().auth.getSession();
 
             if (error || !session) {
+                this.clearRoleCache();
                 if (!isLoginPage) window.location.href = "login.html";
                 return false;
             }
 
             this.user = session.user;
             await this.loadUserProfile();
+            this.syncRoleAttribute();
 
             // If profile is inactive, force sign out
             if (this.profile && !this.profile.is_active) {
@@ -119,6 +147,7 @@ class AuthService {
 
             this.user = data.user;
             await this.loadUserProfile();
+            this.syncRoleAttribute();
 
             if (this.profile && !this.profile.is_active) {
                 await this.signOut();
@@ -139,6 +168,7 @@ class AuthService {
         } finally {
             this.user = null;
             this.profile = null;
+            this.clearRoleCache();
             window.location.href = "login.html";
         }
     }

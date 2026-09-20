@@ -1084,3 +1084,22 @@ html[dir="ltr"] .search-input-group i { inset-inline-start: auto; left: 0.85rem;
     justify-content: center;
     line-height: 1;
 }
+
+
+/* ==========================================================================
+   Role-based sidebar links (no flash)
+   The links below start hidden. auth.js publishes the account role on
+   <html data-clinic-role="..."> (from the cached role right away, then
+   confirmed from clinic_profiles), which reveals only what that role may use:
+     - prescription.html : hidden for staff
+     - intake.html       : hidden for doctors
+     - .doctor-hide (dashboard / appointments) : hidden for doctors
+   ========================================================================== */
+html:not([data-clinic-role]) .sidebar-nav a[href="prescription.html"],
+html:not([data-clinic-role]) .sidebar-nav a[href="intake.html"],
+html:not([data-clinic-role]) .sidebar-nav .doctor-hide,
+html[data-clinic-role="staff"] .sidebar-nav a[href="prescription.html"],
+html[data-clinic-role="doctor"] .sidebar-nav a[href="intake.html"],
+html[data-clinic-role="doctor"] .sidebar-nav .doctor-hide {
+    display: none !important;
+}

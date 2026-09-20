@@ -10,6 +10,89 @@ let branchesList = [];
 const DAYS_AR = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 const DAYS_EN = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
+// ------------------------------------------------------------------
+// Doctor avatar (profile picture) — stored in the public "clinic-uploads"
+// bucket and referenced from doctors.avatar_url, which is exactly what the
+// customer website reads for the doctor card.
+// ------------------------------------------------------------------
+const AVATAR_MAX_BYTES = 3 * 1024 * 1024;
+let avatarState = { file: null, remove: false, currentUrl: null, previewUrl: null };
+
+function resetAvatarState(currentUrl = null) {
+    if (avatarState.previewUrl) URL.revokeObjectURL(avatarState.previewUrl);
+    avatarState = { file: null, remove: false, currentUrl: currentUrl, previewUrl: null };
+    const input = document.getElementById("doctorAvatarFile");
+    if (input) input.value = "";
+    renderAvatarPreview();
+}
+
+function renderAvatarPreview() {
+    const box = document.getElementById("doctorAvatarPreview");
+    const removeBtn = document.getElementById("btnRemoveDoctorAvatar");
+    const uploadLabel = document.getElementById("doctorAvatarUploadLabel");
+    if (!box) return;
+
+    const shownUrl = avatarState.remove ? null : (avatarState.previewUrl || avatarState.currentUrl);
+    box.innerHTML = shownUrl
+        ? `<img src="${shownUrl}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+        : `<i class="fa-solid fa-user-doctor"></i>`;
+
+    if (removeBtn) removeBtn.style.display = shownUrl ? "" : "none";
+    if (uploadLabel) uploadLabel.textContent = i18n.t(shownUrl ? "changeAvatar" : "uploadAvatar");
+}
+
+function onDoctorAvatarSelected(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    if (!file.type || !file.type.startsWith("image/")) {
+        utils.showToast(i18n.t("avatarInvalidType"), "error");
+        input.value = "";
+        return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+        utils.showToast(i18n.t("avatarTooLarge"), "error");
+        input.value = "";
+        return;
+    }
+
+    if (avatarState.previewUrl) URL.revokeObjectURL(avatarState.previewUrl);
+    avatarState.file = file;
+    avatarState.remove = false;
+    avatarState.previewUrl = URL.createObjectURL(file);
+    renderAvatarPreview();
+}
+
+function removeDoctorAvatar() {
+    if (avatarState.previewUrl) URL.revokeObjectURL(avatarState.previewUrl);
+    avatarState.file = null;
+    avatarState.previewUrl = null;
+    avatarState.remove = true;
+    const input = document.getElementById("doctorAvatarFile");
+    if (input) input.value = "";
+    renderAvatarPreview();
+}
+
+/**
+ * Best-effort cleanup of a doctor photo from Storage after it was replaced or
+ * removed. Only touches files inside the "doctors/" folder of our bucket, and
+ * never blocks or fails the save (needs the delete policy in
+ * doctors_customer_link.sql; without it the old file simply stays in the bucket).
+ */
+async function removeStoredAvatar(url) {
+    try {
+        if (!url) return;
+        const marker = `/${CONFIG.STORAGE_BUCKET}/`;
+        const idx = url.indexOf(marker);
+        if (idx === -1) return;
+        const path = decodeURIComponent(url.substring(idx + marker.length).split("?")[0]);
+        if (!path.startsWith("doctors/")) return;
+        await db.getClient().storage.from(CONFIG.STORAGE_BUCKET).remove([path]);
+    } catch (e) {
+        console.warn("Could not remove old doctor avatar:", e);
+    }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     utils.setupMobileSidebar();
 
@@ -152,7 +235,9 @@ async function loadDoctors() {
                 <tr>
                     <td>
                         <div style="display:flex;align-items:center;gap:0.6rem;">
-                            <div class="user-avatar" style="width:32px;height:32px;font-size:0.8rem;"><i class="fa-solid ${d.avatar_icon || "fa-user-doctor"}"></i></div>
+                            <div class="user-avatar" style="width:32px;height:32px;font-size:0.8rem;overflow:hidden;">${d.avatar_url
+                                ? `<img src="${d.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+                                : `<i class="fa-solid ${d.avatar_icon || "fa-user-doctor"}"></i>`}</div>
                             <div>
                                 <strong>${name}</strong>
                                 ${d.bio ? `<div><small style="color:var(--text-muted);">${d.bio}</small></div>` : ""}
@@ -209,6 +294,7 @@ function openAddDoctorModal() {
     document.getElementById("doctorModalTitle").textContent = i18n.t("addDoctor");
     document.getElementById("workHoursList").innerHTML = "";
     addWorkHourRow();
+    resetAvatarState(null);
     document.getElementById("doctorModal").classList.add("active");
 }
 
@@ -231,12 +317,15 @@ function openEditDoctorModal(doctorId) {
     if (hours.length === 0) addWorkHourRow();
     else hours.forEach(h => addWorkHourRow(h.day, h.start, h.end));
 
+    resetAvatarState(d.avatar_url || null);
+
     document.getElementById("doctorModalTitle").textContent = i18n.t("editDoctor");
     document.getElementById("doctorModal").classList.add("active");
 }
 
 function closeDoctorModal() {
     document.getElementById("doctorModal").classList.remove("active");
+    resetAvatarState(null);
 }
 
 async function handleDoctorFormSubmit(e) {
@@ -265,23 +354,57 @@ async function handleDoctorFormSubmit(e) {
         if (day && start && end) hours.push({ day, start, end });
     });
 
-    const categorySelect = document.getElementById("doctorCategoryInput");
-    const categoryName = categorySelect?.options[categorySelect.selectedIndex]?.text || "General";
+    // The specialty badge on the customer website is plain text, so always store
+    // the ARABIC category name (the dropdown text follows the dashboard language).
+    const categoryObj = categoriesList.find(c => c.id === categoryId);
+    const specialty = categoryObj ? categoryObj.name_ar : "عام";
+
+    // Days shown on the customer website: unique, in week order.
+    const uniqueDays = DAYS_AR.filter(d => hours.some(h => h.day === d));
 
     const payload = {
         name_ar: nameAr,
         name_en: nameEn,
         bio: bio,
-        specialty: categoryName,
+        // The customer website shows this text under the doctor's name.
+        title: bio || null,
+        specialty: specialty,
         category_id: categoryId,
         branch_id: branchId,
         working_hours: hours,
         new_visit_fee: newFee,
         followup_fee: followFee,
-        available_days: hours.map(h => h.day)
+        // Legacy "fee" column = new-visit fee, kept in sync for older readers.
+        fee: newFee,
+        available_days: uniqueDays,
+        updated_at: new Date().toISOString()
     };
 
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const submitHtml = submitBtn ? submitBtn.innerHTML : "";
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+    }
+
+    let uploadedAvatarUrl = null;
+    let savedOk = false;
+
     try {
+        // ---- avatar: upload the new photo / remove the current one ----
+        let avatarUrl; // undefined = leave the current photo untouched
+        if (avatarState.file) {
+            uploadedAvatarUrl = await db.uploadClinicFile(avatarState.file, "doctors");
+            if (!uploadedAvatarUrl) {
+                utils.showToast(i18n.t("avatarUploadFailed"), "error");
+                return;
+            }
+            avatarUrl = uploadedAvatarUrl;
+        } else if (avatarState.remove && avatarState.currentUrl) {
+            avatarUrl = null;
+        }
+        if (avatarUrl !== undefined) payload.avatar_url = avatarUrl;
+
         const client = db.getClient();
         if (id) {
             const { error } = await client.from("doctors").update(payload).eq("id", id);
@@ -291,6 +414,12 @@ async function handleDoctorFormSubmit(e) {
             const { error } = await client.from("doctors").insert(payload);
             if (error) throw error;
         }
+        savedOk = true;
+
+        // The old photo is no longer referenced by anything: free the storage.
+        if (avatarUrl !== undefined && avatarState.currentUrl && avatarState.currentUrl !== avatarUrl) {
+            removeStoredAvatar(avatarState.currentUrl);
+        }
 
         utils.showToast(i18n.t("saveSuccess"), "success");
         closeDoctorModal();
@@ -298,6 +427,13 @@ async function handleDoctorFormSubmit(e) {
     } catch (err) {
         console.error("Save doctor error:", err);
         utils.showToast(i18n.t("errorGeneric"), "error");
+        // Don't leave an orphan photo in Storage if the doctor row wasn't saved.
+        if (!savedOk && uploadedAvatarUrl) removeStoredAvatar(uploadedAvatarUrl);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = submitHtml;
+        }
     }
 }
 

@@ -155,6 +155,26 @@
             <form id="doctorForm" onsubmit="handleDoctorFormSubmit(event)">
                 <div class="modal-body">
                     <input type="hidden" id="doctorIdInput">
+
+                    <!-- Doctor profile picture (shown on the customer website's doctor card) -->
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="doctorAvatar">الصورة الشخصية (الأفاتار)</label>
+                        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                            <div id="doctorAvatarPreview" style="width:76px;height:76px;border-radius:50%;overflow:hidden;border:2px solid var(--primary);background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.9rem;flex-shrink:0;">
+                                <i class="fa-solid fa-user-doctor"></i>
+                            </div>
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                                <label class="btn btn-outline btn-sm" for="doctorAvatarFile" style="cursor:pointer;">
+                                    <i class="fa-solid fa-camera"></i> <span id="doctorAvatarUploadLabel">رفع صورة</span>
+                                </label>
+                                <input type="file" id="doctorAvatarFile" accept="image/*" onchange="onDoctorAvatarSelected(this)" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;">
+                                <button type="button" class="btn btn-danger btn-sm" id="btnRemoveDoctorAvatar" onclick="removeDoctorAvatar()" style="display:none;">
+                                    <i class="fa-solid fa-trash"></i> <span data-i18n="removeAvatar">حذف الصورة</span>
+                                </button>
+                            </div>
+                        </div>
+                        <small style="color:var(--text-muted);" data-i18n="avatarHint">تظهر الصورة في كارت الطبيب على موقع العملاء (صورة حتى 3 ميجا).</small>
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" data-i18n="doctorNameAr">الاسم (بالعربية) *</label>
