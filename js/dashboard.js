@@ -115,6 +115,10 @@ async function loadRecentAppointments() {
             const isNew = (a.status || "").toLowerCase() === "new";
             const isPending = notifications.isPending(a.id);
             const dateStr = utils.formatDate(a.created_at, true);
+            const patientName = utils.escHtml(a.patient_name || "");
+            const doctorName = utils.escHtml(a.doctor_name || "-");
+            const branchName = utils.escHtml(a.branch_name || "-");
+            const preferredDay = utils.escHtml(a.preferred_day || "-");
 
             const muteBtn = (isNew && isPending)
                 ? `<button class="btn btn-warning btn-sm mute-alert-btn"
@@ -128,10 +132,10 @@ async function loadRecentAppointments() {
 
             return `
                 <tr ${isNew && isPending ? 'style="background: rgba(251,191,36,0.06);"' : ''}>
-                    <td><strong>${a.patient_name}</strong></td>
-                    <td>${a.doctor_name || "-"}</td>
-                    <td><small style="color: var(--text-muted);">${a.branch_name || "-"}</small></td>
-                    <td><span class="badge badge-info"><i class="fa-solid fa-calendar-day"></i> ${a.preferred_day || "-"}</span></td>
+                    <td><strong>${patientName}</strong></td>
+                    <td>${doctorName}</td>
+                    <td><small style="color: var(--text-muted);">${branchName}</small></td>
+                    <td><span class="badge badge-info"><i class="fa-solid fa-calendar-day"></i> ${preferredDay}</span></td>
                     <td>${utils.getAppointmentStatusBadge(a.status)}</td>
                     <td><small style="color: var(--text-muted);">${dateStr}</small></td>
                     <td>
@@ -187,21 +191,27 @@ async function openAppointmentDetails(id) {
         }
 
         document.getElementById("aptModalTitle").textContent = data.patient_name;
+        const safePhone = utils.escHtml(data.patient_phone || "");
+        const safeDoctor = utils.escHtml(data.doctor_name || "-");
+        const safeBranch = utils.escHtml(data.branch_name || "-");
+        const safeDay = utils.escHtml(data.preferred_day || "-");
+        const safeNotes = utils.escHtml(data.notes || "-");
+        const safeCancelReason = utils.escHtml(data.cancellation_reason || "");
         document.getElementById("aptModalBody").innerHTML = `
             <div class="detail-grid" style="margin-bottom:1rem;">
-                <div class="detail-item"><p><strong>${i18n.t("appointmentPhone")}:</strong> <a href="tel:${data.patient_phone}" style="color:var(--primary);">${data.patient_phone}</a></p></div>
-                <div class="detail-item"><p><strong>${i18n.t("appointmentDoctor")}:</strong> ${data.doctor_name || "-"}</p></div>
-                <div class="detail-item"><p><strong>${i18n.t("appointmentBranch")}:</strong> ${data.branch_name || "-"}</p></div>
-                <div class="detail-item"><p><strong>${i18n.t("appointmentDay")}:</strong> ${data.preferred_day || "-"}</p></div>
+                <div class="detail-item"><p><strong>${i18n.t("appointmentPhone")}:</strong> <a href="tel:${safePhone}" style="color:var(--primary);">${safePhone}</a></p></div>
+                <div class="detail-item"><p><strong>${i18n.t("appointmentDoctor")}:</strong> ${safeDoctor}</p></div>
+                <div class="detail-item"><p><strong>${i18n.t("appointmentBranch")}:</strong> ${safeBranch}</p></div>
+                <div class="detail-item"><p><strong>${i18n.t("appointmentDay")}:</strong> ${safeDay}</p></div>
                 <div class="detail-item"><p><strong>${i18n.t("appointmentStatus")}:</strong> ${utils.getAppointmentStatusBadge(data.status)}</p></div>
                 <div class="detail-item"><p><strong>${i18n.t("appointmentDate")}:</strong> ${utils.formatDate(data.created_at, true)}</p></div>
             </div>
             <p style="margin:0 0 0.25rem;"><strong>${i18n.t("appointmentNotes")}:</strong></p>
-            <p style="margin:0; background: var(--bg-surface-subtle); padding: 0.75rem; border-radius: var(--radius-md); white-space: pre-wrap;">${data.notes || "-"}</p>
+            <p style="margin:0; background: var(--bg-surface-subtle); padding: 0.75rem; border-radius: var(--radius-md); white-space: pre-wrap;">${safeNotes}</p>
             ${data.cancellation_reason ? `
             <div style="margin-top:0.75rem; padding:0.75rem; background:#fff1f1; border:1px solid #fca5a5; border-radius:var(--radius-md);">
                 <p style="margin:0 0 0.25rem; color:#dc2626;"><strong><i class="fa-solid fa-ban" style="margin-inline-end:0.3rem;"></i>${i18n.t("cancelReasonLabel")}</strong></p>
-                <p style="margin:0; white-space:pre-wrap; color:#7f1d1d;">${data.cancellation_reason}</p>
+                <p style="margin:0; white-space:pre-wrap; color:#7f1d1d;">${safeCancelReason}</p>
             </div>` : ""}
         `;
 

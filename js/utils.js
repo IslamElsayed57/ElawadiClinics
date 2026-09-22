@@ -9,6 +9,15 @@ const utils = {
         return i18n.currentLang === "ar" ? `${formatted} ج.م` : `${formatted} EGP`;
     },
 
+    escHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    },
+
     formatDate(dateStr, includeTime = false) {
         if (!dateStr) return "-";
         const d = new Date(dateStr);
