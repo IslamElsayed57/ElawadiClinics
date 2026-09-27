@@ -149,12 +149,19 @@ function setupIntakePatientAutocomplete() {
             return;
         }
 
-        suggestionsEl.innerHTML = matches.map(p => `
-            <div class="patient-suggestion-item" data-name="${p.full_name}" data-phone="${p.phone || ""}" data-age="${p.age || ""}" data-gender="${p.gender || "male"}" data-weight="${p.weight || ""}">
-                <span class="suggestion-name">${p.full_name}</span>
-                <span class="suggestion-phone">${p.phone || ""}</span>
+        suggestionsEl.innerHTML = matches.map(p => {
+            const safeName = utils.escHtml(p.full_name);
+            const safePhone = utils.escHtml(p.phone || "");
+            const safeAge = utils.escHtml(p.age || "");
+            const safeGender = utils.escHtml(p.gender || "male");
+            const safeWeight = utils.escHtml(p.weight || "");
+            return `
+            <div class="patient-suggestion-item" data-name="${safeName}" data-phone="${safePhone}" data-age="${safeAge}" data-gender="${safeGender}" data-weight="${safeWeight}">
+                <span class="suggestion-name">${safeName}</span>
+                <span class="suggestion-phone">${safePhone}</span>
             </div>
-        `).join("");
+        `;
+        }).join("");
         suggestionsEl.classList.add("active");
 
         suggestionsEl.querySelectorAll(".patient-suggestion-item").forEach(item => {
@@ -226,14 +233,14 @@ async function handleIntakeSubmit(e) {
         // Upload multiple rx images
         const rxUrls = [];
         for (const file of rxDroppedFiles) {
-            const url = await db.uploadClinicFile(file, "prescriptions");
+            const url = await db.uploadClinicFile(file, "prescriptions", CONFIG.STORAGE_BUCKET_PATIENT_FILES);
             if (url) rxUrls.push(url);
         }
 
         // Upload multiple lab images
         const labUrls = [];
         for (const file of labDroppedFiles) {
-            const url = await db.uploadClinicFile(file, "labs");
+            const url = await db.uploadClinicFile(file, "labs", CONFIG.STORAGE_BUCKET_PATIENT_FILES);
             if (url) labUrls.push(url);
         }
 

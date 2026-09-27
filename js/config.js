@@ -10,5 +10,6 @@ const CONFIG = {
     DASHBOARD_TITLE_AR: "لوحة تحكم العيادات",
     DASHBOARD_TITLE_EN: "Clinics Management Dashboard",
     STORAGE_BUCKET: "clinic-uploads",
+    STORAGE_BUCKET_PATIENT_FILES: "clinic-patient-files",
     PAGE_SIZE: 15
 };

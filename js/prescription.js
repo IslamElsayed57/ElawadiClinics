@@ -136,12 +136,18 @@ function setupPatientAutocomplete() {
             return;
         }
 
-        suggestionsEl.innerHTML = matches.map(p => `
-            <div class="patient-suggestion-item" data-id="${p.id}" data-name="${p.full_name}" data-phone="${p.phone || ""}" data-age="${p.age || ""}" data-weight="${p.weight || ""}">
-                <span class="suggestion-name">${p.full_name}</span>
-                <span class="suggestion-phone">${p.phone || ""}</span>
+        suggestionsEl.innerHTML = matches.map(p => {
+            const safeName = utils.escHtml(p.full_name);
+            const safePhone = utils.escHtml(p.phone || "");
+            const safeAge = utils.escHtml(p.age || "");
+            const safeWeight = utils.escHtml(p.weight || "");
+            return `
+            <div class="patient-suggestion-item" data-id="${p.id}" data-name="${safeName}" data-phone="${safePhone}" data-age="${safeAge}" data-weight="${safeWeight}">
+                <span class="suggestion-name">${safeName}</span>
+                <span class="suggestion-phone">${safePhone}</span>
             </div>
-        `).join("");
+        `;
+        }).join("");
         suggestionsEl.classList.add("active");
 
         suggestionsEl.querySelectorAll(".patient-suggestion-item").forEach(item => {
@@ -382,9 +388,9 @@ async function generatePrescriptionPdf() {
 
     const medsHtml = medicines.map(m => `
         <div class="rx-med-row">
-            <span class="m-name">${m.name || "-"}</span>
-            <span>${m.dosage ? `<span class="m-label">Dose:</span> ${m.dosage}` : "-"}</span>
-            <span>${m.instructions ? `<span class="m-label">Usage:</span> ${m.instructions}` : "-"}</span>
+            <span class="m-name">${utils.escHtml(m.name) || "-"}</span>
+            <span>${m.dosage ? `<span class="m-label">Dose:</span> ${utils.escHtml(m.dosage)}` : "-"}</span>
+            <span>${m.instructions ? `<span class="m-label">Usage:</span> ${utils.escHtml(m.instructions)}` : "-"}</span>
         </div>
     `).join("");
     document.getElementById("printMeds").innerHTML = medsHtml;
@@ -396,8 +402,8 @@ async function generatePrescriptionPdf() {
         testsTitle.style.display = "block";
         testsEl.innerHTML = tests.map(t => `
             <div class="rx-med-row">
-                <span class="m-name">${t.name}</span>
-                <span>${t.notes ? `<span class="m-label">Notes:</span> ${t.notes}` : ""}</span>
+                <span class="m-name">${utils.escHtml(t.name)}</span>
+                <span>${t.notes ? `<span class="m-label">Notes:</span> ${utils.escHtml(t.notes)}` : ""}</span>
             </div>
         `).join("");
     } else {

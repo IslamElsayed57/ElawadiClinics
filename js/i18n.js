@@ -356,7 +356,8 @@ const TRANSLATIONS = {
         loginBtn: "دخول لوحة التحكم",
         loginSuccess: "تم تسجيل الدخول بنجاح",
         loginError: "بيانات الدخول غير صحيحة أو الحساب غير مفعّل",
-        inactiveAccountError: "عذراً، هذا الحساب معطل حالياً"
+        inactiveAccountError: "عذراً، هذا الحساب معطل حالياً",
+        noProfileError: "حسابك غير مسجل في النظام. يرجى التواصل مع الإدارة."
     },
 
     en: {
@@ -671,7 +672,8 @@ const TRANSLATIONS = {
         loginBtn: "Sign In to Dashboard",
         loginSuccess: "Signed in successfully",
         loginError: "Invalid login credentials or inactive account",
-        inactiveAccountError: "Your account is currently inactive"
+        inactiveAccountError: "Your account is currently inactive",
+        noProfileError: "Your account is not registered in the system. Please contact the administrator."
     }
 };
 

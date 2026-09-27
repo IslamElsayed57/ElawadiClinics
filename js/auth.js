@@ -51,6 +51,16 @@ class AuthService {
 
             this.user = session.user;
             await this.loadUserProfile();
+
+            // SECURITY FIX (F11): If no DB profile exists, reject session & sign out
+            if (!this.profile) {
+                console.warn("No clinic profile found for user:", this.user.id);
+                await this.signOut();
+                alert(typeof i18n !== "undefined" && i18n.t("noProfileError") ? i18n.t("noProfileError") : "حسابك غير مسجل في النظام. يرجى التواصل مع المسؤول.");
+                window.location.href = "login.html";
+                return false;
+            }
+
             this.syncRoleAttribute();
 
             // If profile is inactive, force sign out
@@ -99,41 +109,9 @@ class AuthService {
             console.error("Error loading clinic profile:", err);
         }
 
-        // Fallback: try to create profile
-        try {
-            const { error: insertErr } = await db.getClient()
-                .from("clinic_profiles")
-                .insert({
-                    id: this.user.id,
-                    full_name: this.user.email?.split("@")[0] || "User",
-                    clinic_role: "clinic_admin",
-                    is_active: true
-                });
-
-            if (!insertErr) {
-                const { data: newData } = await db.getClient()
-                    .from("clinic_profiles")
-                    .select("*")
-                    .eq("id", this.user.id)
-                    .maybeSingle();
-                if (newData) {
-                    this.profile = newData;
-                    return;
-                }
-            }
-        } catch (e) {
-            console.warn("Auto-create profile failed:", e);
-        }
-
-        // Last resort: in-memory fallback
-        this.profile = {
-            id: this.user.id,
-            full_name: this.user.email?.split("@")[0] || "User",
-            clinic_role: "clinic_admin",
-            is_active: true,
-            can_view_reports: true,
-            can_view_patients: true
-        };
+        // SECURITY FIX (F11): Do NOT fallback to in-memory admin or auto-create admin profile.
+        // If profile does not exist in DB, set profile to null (access denied).
+        this.profile = null;
     }
 
     async signIn(email, password) {

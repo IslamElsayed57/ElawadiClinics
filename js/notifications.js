@@ -53,7 +53,7 @@ class NotificationManager {
 
             this.addPendingAlert(String(apt.id));
 
-            const patientName = apt.patient_name || i18n.t("appointmentPatient");
+            const patientName = utils.escHtml(apt.patient_name || i18n.t("appointmentPatient"));
             utils.showToast(
                 `🩺 ${i18n.t("newAppointmentAlert")} (${patientName})`,
                 "info"

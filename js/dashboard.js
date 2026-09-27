@@ -83,7 +83,7 @@ async function loadRecentAppointments() {
         let query = db.getClient()
             .from("clinic_appointments")
             .select("id, patient_name, doctor_name, branch_name, preferred_day, status, created_at")
-            .order("created_at", { ascending: true })
+            .order("created_at", { ascending: false })
             .limit(20);
 
         // Doctor: only own appointments
@@ -108,7 +108,7 @@ async function loadRecentAppointments() {
             const sa = sortOrder[(a.status || "").toLowerCase()] ?? 1;
             const sb = sortOrder[(b.status || "").toLowerCase()] ?? 1;
             if (sa !== sb) return sa - sb;
-            return new Date(a.created_at) - new Date(b.created_at);
+            return new Date(b.created_at) - new Date(a.created_at);
         });
 
         tableBody.innerHTML = data.map(a => {

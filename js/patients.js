@@ -217,10 +217,10 @@ async function loadPatients() {
                         const rxDate = rx.created_at ? new Date(rx.created_at).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit" }) : "";
                         const medCount = (rx.medicines || []).length;
                         const testCount = (rx.tests || []).length;
-                        return `<div onclick="viewPatientRx('${p.id}')" style="background:linear-gradient(135deg,#E8F5E9,#F1F8E9);border:1px solid #A5D6A7;border-radius:8px;padding:0.35rem 0.5rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem;font-size:0.72rem;" title="${rx.doctor_name || ""} - ${rxDate} ${rxTime}">
+                        return `<div onclick="viewPatientRx('${p.id}')" style="background:linear-gradient(135deg,#E8F5E9,#F1F8E9);border:1px solid #A5D6A7;border-radius:8px;padding:0.35rem 0.5rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem;font-size:0.72rem;" title="${utils.escHtml(rx.doctor_name || '')} - ${rxDate} ${rxTime}">
                             <i class="fa-solid fa-prescription" style="color:#0D8A64;font-size:0.8rem;"></i>
                             <div style="flex:1;min-width:0;">
-                                <div style="color:#0D8A64;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rx.doctor_name || ""}</div>
+                                <div style="color:#0D8A64;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${utils.escHtml(rx.doctor_name || '')}</div>
                                 <div style="color:var(--text-muted);font-size:0.65rem;">${rxDate} ${rxTime}</div>
                             </div>
                             <div style="text-align:left;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
@@ -263,16 +263,16 @@ async function loadPatients() {
             if (patientRxList && patientRxList.length > 0) {
                 const latestRx = patientRxList[0]; // already sorted by created_at desc
                 if (latestRx.diagnosis) {
-                    diagnosisDisplay = `<span style="font-size:0.8rem;color:var(--text-primary);">${latestRx.diagnosis}</span>`;
+                    diagnosisDisplay = `<span style="font-size:0.8rem;color:var(--text-primary);">${utils.escHtml(latestRx.diagnosis)}</span>`;
                 }
             }
 
             return `
                 <tr>
-                    <td><strong>${p.full_name}</strong></td>
+                    <td><strong>${utils.escHtml(p.full_name)}</strong></td>
                     <td>${genderBadge}</td>
                     <td><small style="color:var(--text-muted);">${p.age ? p.age + " " + i18n.t("yearsUnit") : "-"}</small></td>
-                    <td><a href="tel:${p.phone}" style="color:var(--primary);">${p.phone || "-"}</a></td>
+                    <td><a href="tel:${utils.escHtml(p.phone)}" style="color:var(--primary);">${utils.escHtml(p.phone) || "-"}</a></td>
                     <td><span class="badge badge-info">${doctor}</span></td>
                     <td style="white-space:nowrap;">${visitBadge} ${imgIndicator}</td>
                     <td>${visitDate}</td>
@@ -306,17 +306,27 @@ function parseImageUrls(raw) {
     } catch { return []; }
 }
 
-function renderImageGrid(urls, label) {
+async function renderImageGrid(urls, label) {
     if (!urls.length) return `<small style="color:var(--text-muted);">-</small>`;
+
+    // Legacy files (uploaded before the private bucket split) are already
+    // full public URLs and display as-is. New files are bare storage
+    // paths in the private clinic-patient-files bucket and need a
+    // short-lived signed URL to be viewable.
+    const resolved = await Promise.all(urls.map(async (u) => {
+        if (u.startsWith("http")) return u;
+        return await db.getClinicPatientFileSignedUrl(u);
+    }));
+
     return `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
-        ${urls.map((u, i) => {
-            const full = u.startsWith("http") ? u : `https://lbjeykexbkhyvuafndjr.supabase.co/storage/v1/object/public/${u}`;
+        ${resolved.map((full, i) => {
+            if (!full) return "";
             return `<div class="patient-image-thumb" onclick="openImageViewer('${full}', '${label} ${i + 1}')" style="background:url('${full}') center/cover no-repeat;width:80px;height:80px;border-radius:10px;cursor:pointer;border:1px solid var(--border-color);"></div>`;
         }).join("")}
     </div>`;
 }
 
-function openPatientModal(patientId) {
+async function openPatientModal(patientId) {
     const p = patientsList.find(x => x.id === patientId);
     if (!p) return;
 
@@ -331,6 +341,13 @@ function openPatientModal(patientId) {
     const labUrls = parseImageUrls(p.lab_image);
     const rxLabel = i18n.t("prescriptionLabel");
     const labLabel = i18n.t("labLabel");
+
+    // Resolve signed URLs (for new private-bucket files) before building
+    // the modal HTML, since createSignedUrl is async.
+    const [rxGridHtml, labGridHtml] = await Promise.all([
+        renderImageGrid(rxUrls, rxLabel),
+        renderImageGrid(labUrls, labLabel)
+    ]);
 
     document.getElementById("patientModalTitle").textContent = `${i18n.t("navPatients")} - ${p.full_name}`;
     const visitsCount = p.phone ? patientsList.filter(x => x.phone === p.phone).length : (p.visits_count || 1);
@@ -350,11 +367,11 @@ function openPatientModal(patientId) {
         <div style="display:flex;gap:1rem;flex-wrap:wrap;">
             <div style="flex:1;min-width:160px;">
                 <strong><small>${i18n.t("prescriptionImagesLabel")} (${rxUrls.length})</small></strong>
-                ${renderImageGrid(rxUrls, rxLabel)}
+                ${rxGridHtml}
             </div>
             <div style="flex:1;min-width:160px;">
                 <strong><small>${i18n.t("labImagesLabel")} (${labUrls.length})</small></strong>
-                ${renderImageGrid(labUrls, labLabel)}
+                ${labGridHtml}
             </div>
         </div>
     `;
@@ -469,8 +486,8 @@ function viewPatientRx(patientId) {
     rxList.forEach(rx => {
         const time = rx.created_at ? new Date(rx.created_at).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" }) : "";
         const date = rx.created_at ? new Date(rx.created_at).toLocaleDateString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
-        const meds = (rx.medicines || []).map(m => `<li><strong>${m.name || ""}</strong> - ${m.dosage || ""} ${m.instructions ? `(${m.instructions})` : ""}</li>`).join("");
-        const tests = (rx.tests || []).map(t => `<li><strong>${t.name}</strong> ${t.notes ? `- ${t.notes}` : ""}</li>`).join("");
+        const meds = (rx.medicines || []).map(m => `<li><strong>${utils.escHtml(m.name || "")}</strong> - ${utils.escHtml(m.dosage || "")} ${m.instructions ? `(${utils.escHtml(m.instructions)})` : ""}</li>`).join("");
+        const tests = (rx.tests || []).map(t => `<li><strong>${utils.escHtml(t.name)}</strong> ${t.notes ? `- ${utils.escHtml(t.notes)}` : ""}</li>`).join("");
 
         html += `
             <div style="border:1px solid var(--border-color);border-radius:var(--radius-md);padding:1rem;margin-bottom:0.75rem;">
@@ -480,7 +497,7 @@ function viewPatientRx(patientId) {
                         <span style="margin-inline-start:0.5rem;color:var(--text-muted);font-size:0.85rem;">${time}</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;">
-                        <small style="color:var(--text-muted);">${rx.doctor_name || ""}</small>
+                        <small style="color:var(--text-muted);">${utils.escHtml(rx.doctor_name || "")}</small>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="previewPrescriptionPdf('${rx.id}')" title="${i18n.t("viewPrint")}">
                             <i class="fa-solid fa-eye"></i> ${i18n.t("viewDetails")}
                         </button>
@@ -488,7 +505,7 @@ function viewPatientRx(patientId) {
                 </div>
                 ${meds ? `<div style="margin-bottom:0.5rem;"><small style="color:var(--text-muted);">${i18n.t("medicinesLabel")}</small><ul style="margin:0.25rem 0 0 1.2rem;">${meds}</ul></div>` : ""}
                 ${tests ? `<div style="margin-bottom:0.5rem;"><small style="color:var(--text-muted);">${i18n.t("testsRadiologyLabel")}</small><ul style="margin:0.25rem 0 0 1.2rem;">${tests}</ul></div>` : ""}
-                ${rx.notes ? `<div><small style="color:var(--text-muted);">${i18n.t("notesLabel")}</small> ${rx.notes}</div>` : ""}
+                ${rx.notes ? `<div><small style="color:var(--text-muted);">${i18n.t("notesLabel")}</small> ${utils.escHtml(rx.notes)}</div>` : ""}
             </div>
         `;
     });
@@ -525,9 +542,9 @@ function previewPrescriptionPdf(rxId) {
 
     const medsHtml = (rx.medicines || []).map(m => `
         <div class="rx-med-row">
-            <span class="m-name">${m.name || "-"}</span>
-            <span>${m.dosage ? `<span class="m-label">Dose:</span> ${m.dosage}` : "-"}</span>
-            <span>${m.instructions ? `<span class="m-label">Usage:</span> ${m.instructions}` : "-"}</span>
+            <span class="m-name">${utils.escHtml(m.name) || "-"}</span>
+            <span>${m.dosage ? `<span class="m-label">Dose:</span> ${utils.escHtml(m.dosage)}` : "-"}</span>
+            <span>${m.instructions ? `<span class="m-label">Usage:</span> ${utils.escHtml(m.instructions)}` : "-"}</span>
         </div>
     `).join("");
     document.getElementById("printMeds").innerHTML = medsHtml;
@@ -539,8 +556,8 @@ function previewPrescriptionPdf(rxId) {
         testsTitle.style.display = "block";
         testsEl.innerHTML = tests.map(t => `
             <div class="rx-med-row">
-                <span class="m-name">${t.name}</span>
-                <span>${t.notes ? `<span class="m-label">Notes:</span> ${t.notes}` : ""}</span>
+                <span class="m-name">${utils.escHtml(t.name)}</span>
+                <span>${t.notes ? `<span class="m-label">Notes:</span> ${utils.escHtml(t.notes)}` : ""}</span>
             </div>
         `).join("");
     } else {
